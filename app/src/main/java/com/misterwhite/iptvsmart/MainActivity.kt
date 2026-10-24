@@ -2,7 +2,7 @@ package com.misterwhite.iptvsmart
 
 import android.graphics.Color
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -35,7 +35,8 @@ import com.misterwhite.iptvsmart.ui.main.MainScreen
 import com.misterwhite.iptvsmart.ui.main.MainViewModel
 import com.misterwhite.iptvsmart.ui.theme.IptvTheme
 
-class MainActivity : ComponentActivity() {
+// FragmentActivity : le choix de la Chromecast s'ouvre dans une boîte de dialogue à fragments.
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(

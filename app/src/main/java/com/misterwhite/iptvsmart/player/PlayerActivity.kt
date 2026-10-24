@@ -7,7 +7,7 @@ import android.os.Looper
 import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
@@ -57,6 +57,11 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.cast.CastPlayer
+import androidx.media3.cast.SessionAvailabilityListener
+import androidx.compose.material.icons.filled.Cast
+import com.misterwhite.iptvsmart.cast.CastButton
+import com.misterwhite.iptvsmart.cast.CastSupport
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -71,12 +76,18 @@ import com.misterwhite.iptvsmart.ui.theme.IptvTheme
 
 /** Lecteur plein écran pour le direct, les films et les épisodes. */
 @OptIn(UnstableApi::class)
-class PlayerActivity : ComponentActivity() {
+class PlayerActivity : FragmentActivity() {
 
     private val container get() = (application as IptvApp).container
     private val library get() = container.library
 
     private var player: ExoPlayer? = null
+    private var castPlayer: CastPlayer? = null
+    private val isCasting = mutableStateOf(false)
+    private var castAvailable = false
+
+    /** Le lecteur qui joue vraiment : la Chromecast pendant un cast, sinon le téléphone. */
+    private val activePlayer: Player? get() = if (isCasting.value) castPlayer else player
     private var playerView: PlayerView? = null
     private var items: List<PlayItem> = emptyList()
 
@@ -117,14 +128,33 @@ class PlayerActivity : ComponentActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
 
+        CastSupport.castContext(this)?.let { context ->
+            castAvailable = true
+            castPlayer = CastPlayer(context).apply {
+                setSessionAvailabilityListener(castSessionListener)
+                addListener(castListener)
+            }
+        }
+
         setContent {
             IptvTheme { PlayerScreen() }
         }
     }
 
+    override fun onDestroy() {
+        castPlayer?.let {
+            it.setSessionAvailabilityListener(null)
+            it.removeListener(castListener)
+            it.release()
+        }
+        castPlayer = null
+        super.onDestroy()
+    }
+
     override fun onStart() {
         super.onStart()
         if (items.isNotEmpty()) initializePlayer()
+        if (castPlayer?.isCastSessionAvailable == true && !isCasting.value) startCasting()
     }
 
     override fun onStop() {
@@ -134,7 +164,7 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        player?.let {
+        activePlayer?.let {
             outState.putInt(STATE_INDEX, it.currentMediaItemIndex)
             outState.putLong(STATE_POSITION, it.currentPosition)
         } ?: run {
@@ -165,11 +195,11 @@ class PlayerActivity : ComponentActivity() {
         }
         exo.setMediaItems(items.indices.map { mediaItem(it) }, currentIndex, startPosition)
         exo.addListener(listener)
-        exo.playWhenReady = true
+        exo.playWhenReady = !isCasting.value
         exo.prepare()
 
         player = exo
-        playerView?.player = exo
+        if (!isCasting.value) playerView?.player = exo
         trackedIndex = currentIndex
         onItemStarted(currentIndex)
         handler.postDelayed(saveTick, SAVE_INTERVAL_MS)
@@ -179,21 +209,24 @@ class PlayerActivity : ComponentActivity() {
         handler.removeCallbacks(saveTick)
         val exo = player ?: return
         saveProgress()
-        currentIndex = exo.currentMediaItemIndex
-        resumePositionMs = exo.currentPosition
+        if (!isCasting.value) {
+            currentIndex = exo.currentMediaItemIndex
+            resumePositionMs = exo.currentPosition
+        }
         exo.removeListener(listener)
         exo.release()
         player = null
-        playerView?.player = null
+        if (!isCasting.value) playerView?.player = null
     }
 
-    private fun mediaItem(index: Int): MediaItem {
+    private fun mediaItem(index: Int, forCast: Boolean = false): MediaItem {
         val item = items[index]
-        val url = if (index in usedFallback && item.fallbackUrl != null) item.fallbackUrl else item.url
+        // La Chromecast ne lit pas les flux .ts : elle reçoit toujours le flux HLS.
+        val url = if (!forCast && index in usedFallback && item.fallbackUrl != null) item.fallbackUrl else item.url
         return MediaItem.Builder()
             .setUri(url)
             .setMediaId(index.toString())
-            .apply { if (url.endsWith(".m3u8", ignoreCase = true)) setMimeType(MimeTypes.APPLICATION_M3U8) }
+            .setMimeType(mimeTypeOf(url))
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     .setTitle(item.title)
@@ -202,6 +235,69 @@ class PlayerActivity : ComponentActivity() {
                     .build()
             )
             .build()
+    }
+
+    private fun mimeTypeOf(url: String): String = when (url.substringAfterLast('.').substringBefore('?').lowercase()) {
+        "m3u8" -> MimeTypes.APPLICATION_M3U8
+        "ts" -> MimeTypes.VIDEO_MP2T
+        "mkv" -> MimeTypes.VIDEO_MATROSKA
+        "webm" -> MimeTypes.VIDEO_WEBM
+        "avi" -> "video/x-msvideo"
+        else -> MimeTypes.VIDEO_MP4
+    }
+
+    private val castSessionListener = object : SessionAvailabilityListener {
+        override fun onCastSessionAvailable() = startCasting()
+        override fun onCastSessionUnavailable() = stopCasting()
+    }
+
+    private val castListener = object : Player.Listener {
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            if (!isCasting.value) return
+            val index = castPlayer?.currentMediaItemIndex ?: return
+            trackedIndex = index
+            onItemStarted(index)
+        }
+
+        override fun onPlayerError(e: PlaybackException) {
+            if (isCasting.value) {
+                error.value = "La Chromecast n'arrive pas à lire ce flux. Certains formats ne passent qu'en lecture sur le téléphone."
+            }
+        }
+    }
+
+    /** Envoie la lecture en cours sur la Chromecast, à la même position. */
+    private fun startCasting() {
+        val cast = castPlayer ?: return
+        val local = player
+        val index = local?.currentMediaItemIndex ?: currentIndex
+        val item = items.getOrNull(index) ?: return
+        val position = if (item.kind == MediaKind.LIVE) 0L else (local?.currentPosition ?: resumePositionMs.coerceAtLeast(0))
+        saveProgress()
+        local?.pause()
+        isCasting.value = true
+        error.value = null
+        cast.setMediaItems(items.indices.map { mediaItem(it, forCast = true) }, index, position)
+        cast.playWhenReady = true
+        cast.prepare()
+        playerView?.player = cast
+        trackedIndex = index
+        onItemStarted(index)
+    }
+
+    /** Reprend sur le téléphone là où la Chromecast s'est arrêtée. */
+    private fun stopCasting() {
+        if (!isCasting.value) return
+        val cast = castPlayer
+        val index = cast?.currentMediaItemIndex ?: currentIndex
+        val position = cast?.currentPosition ?: 0L
+        saveProgress()
+        isCasting.value = false
+        val local = player ?: return
+        playerView?.player = local
+        val item = items.getOrNull(index)
+        if (item?.kind == MediaKind.LIVE) local.seekToDefaultPosition(index) else local.seekTo(index, position)
+        local.play()
     }
 
     private val listener = object : Player.Listener {
@@ -213,6 +309,7 @@ class PlayerActivity : ComponentActivity() {
                     library.record(it.copy(positionMs = it.durationMs, updatedAt = System.currentTimeMillis()))
                 }
             }
+            if (isCasting.value) return
             val index = player?.currentMediaItemIndex ?: return
             trackedIndex = index
             error.value = null
@@ -224,6 +321,7 @@ class PlayerActivity : ComponentActivity() {
         }
 
         override fun onPlayerError(e: PlaybackException) {
+            if (isCasting.value) return
             val exo = player ?: return
             val index = exo.currentMediaItemIndex
             val item = items.getOrNull(index) ?: return
@@ -252,7 +350,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun saveProgress() {
-        val exo = player ?: return
+        val exo = activePlayer ?: return
         val item = items.getOrNull(exo.currentMediaItemIndex) ?: return
         if (item.kind == MediaKind.LIVE) return
         val duration = exo.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: return
@@ -277,7 +375,7 @@ class PlayerActivity : ComponentActivity() {
         )
     }
 
-    private fun currentItem(): PlayItem? = items.getOrNull(player?.currentMediaItemIndex ?: currentIndex)
+    private fun currentItem(): PlayItem? = items.getOrNull(activePlayer?.currentMediaItemIndex ?: currentIndex)
 
     private fun toggleFavorite() {
         val item = currentItem() ?: return
@@ -399,6 +497,20 @@ class PlayerActivity : ComponentActivity() {
                 }
             }
 
+            if (isCasting.value && error.value == null) {
+                // Au-dessus des commandes centrales pour ne pas les cacher.
+                Column(
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 72.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(Icons.Filled.Cast, contentDescription = null, tint = Color.White, modifier = Modifier.width(56.dp).height(56.dp))
+                    Spacer(Modifier.height(12.dp))
+                    Text("Lecture sur ta Chromecast", color = Color.White, style = MaterialTheme.typography.titleMedium)
+                }
+            }
+
             error.value?.let { message ->
                 Column(
                     Modifier
@@ -411,8 +523,8 @@ class PlayerActivity : ComponentActivity() {
                     Spacer(Modifier.height(16.dp))
                     Button(onClick = {
                         error.value = null
-                        player?.prepare()
-                        player?.play()
+                        activePlayer?.prepare()
+                        activePlayer?.play()
                     }) { Text("Réessayer") }
                 }
             }
@@ -421,7 +533,9 @@ class PlayerActivity : ComponentActivity() {
 
     /** Emplacement pour des boutons en plus dans la barre du haut (Chromecast). */
     @Composable
-    private fun PlayerExtraActions() {}
+    private fun PlayerExtraActions() {
+        if (castAvailable) CastButton(Modifier.padding(horizontal = 4.dp))
+    }
 
     companion object {
         private const val STATE_INDEX = "index"

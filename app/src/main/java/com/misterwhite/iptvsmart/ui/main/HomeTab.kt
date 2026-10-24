@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.misterwhite.iptvsmart.cast.CastButton
 import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.ui.components.ChannelCard
 import com.misterwhite.iptvsmart.ui.components.ContentRow
@@ -179,8 +180,11 @@ private fun TopBar(openAccount: () -> Unit, modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text("IPTV Smart", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-        IconButton(onClick = openAccount) {
-            Icon(Icons.Filled.AccountCircle, contentDescription = "Mon compte", modifier = Modifier.size(30.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            CastButton(Modifier.size(48.dp))
+            IconButton(onClick = openAccount) {
+                Icon(Icons.Filled.AccountCircle, contentDescription = "Mon compte", modifier = Modifier.size(30.dp))
+            }
         }
     }
 }
