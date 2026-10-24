@@ -1,5 +1,12 @@
 <resources>
-    <style name="Theme.IPTVSmart" parent="android:Theme.Material.NoActionBar">
+    <!--
+        Thème AppCompat avec des couleurs opaques : la fenêtre de choix de la
+        Chromecast (mediarouter) s'en sert et plante si colorPrimary manque.
+    -->
+    <style name="Theme.IPTVSmart" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/background</item>
+        <item name="colorAccent">@color/accent</item>
         <item name="android:windowBackground">@color/background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
