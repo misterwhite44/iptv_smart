@@ -26,12 +26,15 @@ jobs:
         run: ./gradlew --no-daemon assembleRelease
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk IPTVSmart.apk
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk Zynora.apk
+          # Ancien nom gardé pour que les liens déjà partagés restent à jour.
+          cp Zynora.apk IPTVSmart.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: IPTVSmart-apk
-          path: IPTVSmart.apk
+          name: Zynora-apk
+          path: Zynora.apk
 
       # Sur main, publie l'APK dans la release "latest" pour le télécharger
       # directement depuis le téléphone.
@@ -40,8 +43,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
-          name: IPTV Smart (dernière version)
+          name: Zynora (dernière version)
           body: "Build ${{ github.run_number }} — commit ${{ github.sha }}"
           prerelease: false
           make_latest: true
-          files: IPTVSmart.apk
+          files: |
+            Zynora.apk
+            IPTVSmart.apk

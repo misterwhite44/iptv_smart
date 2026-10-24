@@ -11,7 +11,7 @@
         android:pathData="M32,38 L76,38 Q80,38 80,42 L80,68 Q80,72 76,72 L32,72 Q28,72 28,68 L28,42 Q28,38 32,38 Z" />
     <!-- Bouton lecture -->
     <path
-        android:fillColor="#FF1E90FF"
+        android:fillColor="#FF8B5CF6"
         android:pathData="M48,46 L64,55 L48,64 Z" />
     <!-- Pied -->
     <path

@@ -179,7 +179,7 @@ private fun TopBar(openAccount: () -> Unit, modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text("IPTV Smart", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+        Text("Zynora", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
         Row(verticalAlignment = Alignment.CenterVertically) {
             CastButton(Modifier.size(48.dp))
             IconButton(onClick = openAccount) {

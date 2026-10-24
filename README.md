@@ -1,11 +1,11 @@
-# IPTV Smart
+# Zynora
 
 Application Android IPTV pour comptes **Xtream Codes** : chaînes en direct, films, séries,
 historique de lecture et cast vers Chromecast. Interface sombre inspirée de Disney+.
 
 ## Installer l'APK sur le téléphone
 
-1. Sur ton téléphone, ouvre la page **Releases** du dépôt et télécharge `IPTVSmart.apk`
+1. Sur ton téléphone, ouvre la page **Releases** du dépôt et télécharge `Zynora.apk`
    (release « latest », mise à jour à chaque nouvelle version).
 2. Ouvre le fichier. Android demande d'autoriser l'installation depuis ton navigateur :
    accepte, puis appuie sur **Installer**.

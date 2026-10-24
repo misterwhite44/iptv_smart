@@ -2,5 +2,9 @@
 -dontwarn com.google.errorprone.annotations.**
 -dontwarn javax.annotation.**
 
+# Tink (chiffrement des identifiants) lit ses messages protobuf par réflexion.
+-keep class com.google.crypto.tink.** { *; }
+-keepclassmembers class * extends com.google.crypto.tink.shaded.protobuf.GeneratedMessageLite { <fields>; }
+
 # Classe chargée par son nom depuis le manifeste par le framework Cast.
 -keep class com.misterwhite.iptvsmart.cast.CastOptionsProvider { *; }

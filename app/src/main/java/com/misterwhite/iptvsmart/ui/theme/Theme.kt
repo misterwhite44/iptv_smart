@@ -11,14 +11,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 object IptvColors {
-    val Background = Color(0xFF0B0E1A)
-    val BackgroundTop = Color(0xFF1A1F35)
-    val Surface = Color(0xFF1C2033)
-    val SurfaceHigh = Color(0xFF262B42)
-    val Accent = Color(0xFF1E90FF)
-    val AccentBright = Color(0xFF4FB0FF)
-    val TextPrimary = Color(0xFFF9F9F9)
-    val TextSecondary = Color(0xFFA9AEC2)
+    val Background = Color(0xFF0E0818)
+    val BackgroundTop = Color(0xFF2B1248)
+    val Surface = Color(0xFF1D1430)
+    val SurfaceHigh = Color(0xFF2C2045)
+    val Accent = Color(0xFF8B5CF6)
+    val AccentBright = Color(0xFFB794FF)
+    val TextPrimary = Color(0xFFF9F7FC)
+    val TextSecondary = Color(0xFFB4A9CC)
     val Error = Color(0xFFFF6B6B)
 
     val screenGradient = Brush.verticalGradient(listOf(BackgroundTop, Background))

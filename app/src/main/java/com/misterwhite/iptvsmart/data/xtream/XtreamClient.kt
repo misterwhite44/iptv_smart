@@ -11,6 +11,11 @@ import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.ResponseBody
+import android.util.JsonReader
+import android.util.JsonToken
+import android.util.MalformedJsonException
+import java.io.InputStreamReader
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -51,33 +56,46 @@ class XtreamClient(private val http: OkHttpClient) {
         )
     }
 
+    // Les listes complètes peuvent peser des dizaines de Mo : on les lit en flux,
+    // élément par élément, sans jamais charger toute la réponse en mémoire.
+
     suspend fun liveChannels(credentials: XtreamCredentials): List<LiveChannel> =
-        request(credentials, "get_live_streams").objects().mapNotNull { o ->
+        streamList(credentials, "get_live_streams", LIVE_FIELDS) { f ->
             LiveChannel(
-                id = o.str("stream_id") ?: return@mapNotNull null,
-                name = o.str("name") ?: "Chaîne",
-                logo = o.str("stream_icon"),
-                categoryId = o.str("category_id"),
-                epgChannelId = o.str("epg_channel_id"),
+                id = f["stream_id"] ?: return@streamList null,
+                name = f["name"] ?: "Chaîne",
+                logo = f["stream_icon"],
+                categoryId = f["category_id"],
+                epgChannelId = f["epg_channel_id"],
             )
         }
 
     suspend fun movies(credentials: XtreamCredentials): List<Movie> =
-        request(credentials, "get_vod_streams").objects().mapNotNull { it.toMovie() }
+        streamList(credentials, "get_vod_streams", MOVIE_FIELDS) { f ->
+            Movie(
+                id = f["stream_id"] ?: return@streamList null,
+                name = f["name"] ?: "Film",
+                poster = f["stream_icon"],
+                rating = f["rating"]?.toDoubleOrNull()?.takeIf { it > 0 },
+                addedAt = f["added"]?.toLongOrNull() ?: 0L,
+                categoryId = f["category_id"],
+                extension = f["container_extension"] ?: "mp4",
+            )
+        }
 
     suspend fun series(credentials: XtreamCredentials): List<Series> =
-        request(credentials, "get_series").objects().mapNotNull { o ->
+        streamList(credentials, "get_series", SERIES_FIELDS) { f ->
             Series(
-                id = o.str("series_id") ?: return@mapNotNull null,
-                name = o.str("name") ?: "Série",
-                cover = o.str("cover"),
-                backdrop = o.firstImage("backdrop_path"),
-                plot = o.str("plot"),
-                genre = o.str("genre"),
-                year = o.str("releaseDate")?.take(4) ?: o.str("release_date")?.take(4),
-                rating = o.str("rating")?.toDoubleOrNull()?.takeIf { it > 0 },
-                updatedAt = o.long("last_modified") ?: 0L,
-                categoryId = o.str("category_id"),
+                id = f["series_id"] ?: return@streamList null,
+                name = f["name"] ?: "Série",
+                cover = f["cover"],
+                backdrop = f["backdrop_path"],
+                plot = f["plot"],
+                genre = f["genre"],
+                year = (f["releaseDate"] ?: f["release_date"])?.take(4),
+                rating = f["rating"]?.toDoubleOrNull()?.takeIf { it > 0 },
+                updatedAt = f["last_modified"]?.toLongOrNull() ?: 0L,
+                categoryId = f["category_id"],
             )
         }
 
@@ -140,19 +158,6 @@ class XtreamClient(private val http: OkHttpClient) {
         )
     }
 
-    private fun JsonObject.toMovie(): Movie? {
-        val id = str("stream_id") ?: return null
-        return Movie(
-            id = id,
-            name = str("name") ?: "Film",
-            poster = str("stream_icon"),
-            rating = str("rating")?.toDoubleOrNull()?.takeIf { it > 0 },
-            addedAt = long("added") ?: 0L,
-            categoryId = str("category_id"),
-            extension = str("container_extension") ?: "mp4",
-        )
-    }
-
     suspend fun categories(credentials: XtreamCredentials, type: ContentType): List<Category> {
         val action = when (type) {
             ContentType.LIVE -> "get_live_categories"
@@ -169,7 +174,101 @@ class XtreamClient(private val http: OkHttpClient) {
         credentials: XtreamCredentials,
         action: String?,
         params: Map<String, String> = emptyMap(),
-    ): JsonElement = withContext(Dispatchers.IO) {
+    ): JsonElement = execute(credentials, action, params) { body ->
+        val text = body.string()
+        if (text.isBlank()) throw XtreamException(UNEXPECTED)
+        json.parseToJsonElement(text)
+    }
+
+    /**
+     * Lit une liste d'objets JSON en flux. Seuls les champs de [fields] sont
+     * gardés, en texte ; pour un champ en liste, on garde le premier élément.
+     */
+    private suspend fun <T : Any> streamList(
+        credentials: XtreamCredentials,
+        action: String,
+        fields: Set<String>,
+        build: (Map<String, String>) -> T?,
+    ): List<T> = execute(credentials, action, emptyMap()) { body ->
+        val result = ArrayList<T>()
+        JsonReader(InputStreamReader(body.byteStream(), Charsets.UTF_8)).use { reader ->
+            reader.isLenient = true
+            val readItem = {
+                if (reader.peek() == JsonToken.BEGIN_OBJECT) {
+                    build(readFields(reader, fields))?.let { result.add(it) }
+                } else {
+                    reader.skipValue()
+                }
+            }
+            when (reader.peek()) {
+                JsonToken.BEGIN_ARRAY -> {
+                    reader.beginArray()
+                    while (reader.hasNext()) readItem()
+                    reader.endArray()
+                }
+                // Certains serveurs renvoient {"0": {...}, "1": {...}}.
+                JsonToken.BEGIN_OBJECT -> {
+                    reader.beginObject()
+                    while (reader.hasNext()) {
+                        reader.nextName()
+                        readItem()
+                    }
+                    reader.endObject()
+                }
+                else -> reader.skipValue()
+            }
+        }
+        result
+    }
+
+    private fun readFields(reader: JsonReader, fields: Set<String>): Map<String, String> {
+        val values = HashMap<String, String>(fields.size * 2)
+        reader.beginObject()
+        while (reader.hasNext()) {
+            val name = reader.nextName()
+            if (name !in fields) {
+                reader.skipValue()
+                continue
+            }
+            readScalar(reader)?.let { values[name] = it }
+        }
+        reader.endObject()
+        return values
+    }
+
+    /** Valeur en texte ; pour une liste, son premier élément texte. */
+    private fun readScalar(reader: JsonReader): String? = when (reader.peek()) {
+        JsonToken.STRING, JsonToken.NUMBER -> reader.nextString().trim().takeIf { it.isNotEmpty() && it != "null" }
+        JsonToken.BOOLEAN -> reader.nextBoolean().toString()
+        JsonToken.NULL -> {
+            reader.nextNull()
+            null
+        }
+        JsonToken.BEGIN_ARRAY -> {
+            reader.beginArray()
+            var first: String? = null
+            while (reader.hasNext()) {
+                val value = if (reader.peek() == JsonToken.STRING) reader.nextString() else {
+                    reader.skipValue()
+                    null
+                }
+                if (first == null && !value.isNullOrBlank()) first = value
+            }
+            reader.endArray()
+            first
+        }
+        else -> {
+            reader.skipValue()
+            null
+        }
+    }
+
+    private suspend fun <T> execute(
+        credentials: XtreamCredentials,
+        action: String?,
+        params: Map<String, String>,
+        parse: (ResponseBody) -> T,
+    ): T = withContext(Dispatchers.IO) {
         val url = apiUrl(credentials, action, params)
         val call = http.newCall(Request.Builder().url(url).get().build())
         try {
@@ -180,10 +279,17 @@ class XtreamClient(private val http: OkHttpClient) {
                     !response.isSuccessful ->
                         throw XtreamException("Le serveur a répondu avec une erreur (${response.code}).")
                 }
-                val body = response.body?.string().orEmpty()
-                if (body.isBlank()) throw XtreamException(UNEXPECTED)
+                val body = response.body ?: throw XtreamException(UNEXPECTED)
                 try {
-                    json.parseToJsonElement(body)
+                    parse(body)
+                } catch (e: XtreamException) {
+                    throw e
+                } catch (e: MalformedJsonException) {
+                    throw XtreamException(UNEXPECTED, e)
+                } catch (e: IOException) {
+                    throw e
+                } catch (e: OutOfMemoryError) {
+                    throw XtreamException("Le catalogue est trop gros pour la mémoire du téléphone.", e)
                 } catch (e: Exception) {
                     throw XtreamException(UNEXPECTED, e)
                 }
@@ -220,6 +326,15 @@ class XtreamClient(private val http: OkHttpClient) {
     }
 
     companion object {
+        private val LIVE_FIELDS = setOf("stream_id", "name", "stream_icon", "category_id", "epg_channel_id")
+        private val MOVIE_FIELDS = setOf(
+            "stream_id", "name", "stream_icon", "rating", "added", "category_id", "container_extension",
+        )
+        private val SERIES_FIELDS = setOf(
+            "series_id", "name", "cover", "backdrop_path", "plot", "genre", "releaseDate", "release_date",
+            "rating", "last_modified", "category_id",
+        )
+
         private const val BAD_CREDENTIALS = "Identifiant ou mot de passe incorrect."
         private const val UNEXPECTED =
             "Réponse inattendue du serveur. Vérifie que l'URL est bien celle de ton fournisseur Xtream."

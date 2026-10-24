@@ -85,7 +85,7 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
                 modifier = Modifier.size(64.dp),
             )
             Text(
-                text = "IPTV Smart",
+                text = "Zynora",
                 style = MaterialTheme.typography.headlineLarge,
                 color = IptvColors.TextPrimary,
             )

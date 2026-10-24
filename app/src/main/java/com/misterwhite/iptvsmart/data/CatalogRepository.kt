@@ -37,7 +37,13 @@ class CatalogRepository(
     fun credentials(): XtreamCredentials =
         store.load() ?: throw XtreamException("Session expirée, reconnecte-toi.")
 
-    suspend fun content(forceRefresh: Boolean = false): Content = mutex.withLock {
+    suspend fun content(forceRefresh: Boolean = false): Content = try {
+        loadContent(forceRefresh)
+    } catch (e: OutOfMemoryError) {
+        throw XtreamException("Le catalogue est trop gros pour la mémoire du téléphone.", e)
+    }
+
+    private suspend fun loadContent(forceRefresh: Boolean): Content = mutex.withLock {
         if (!forceRefresh) cached?.let { return@withLock it }
         val c = credentials()
         coroutineScope {

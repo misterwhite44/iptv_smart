@@ -16,6 +16,7 @@ class IptvApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        CrashReporter.install(this)
         container = AppContainer(this)
     }
 
@@ -47,6 +48,6 @@ class AppContainer(app: Application) {
     val library = LibraryRepository(app)
 
     companion object {
-        const val USER_AGENT = "Mozilla/5.0 (Linux; Android) IPTVSmart/1.0"
+        const val USER_AGENT = "Mozilla/5.0 (Linux; Android) Zynora/1.0"
     }
 }

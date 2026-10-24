@@ -7,7 +7,24 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import android.widget.Toast
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterwhite.iptvsmart.data.FavoriteEntry
@@ -47,9 +64,48 @@ class MainActivity : FragmentActivity() {
         setContent {
             IptvTheme {
                 AppNavigation(container)
+                CrashDialog()
             }
         }
     }
+}
+
+/** Montre la cause du dernier plantage, avec un bouton pour la copier. */
+@Composable
+private fun CrashDialog() {
+    val context = LocalContext.current
+    var crash by remember { mutableStateOf(CrashReporter.lastCrash(context)) }
+    val report = crash ?: return
+    val clipboard = LocalClipboardManager.current
+    val dismiss = {
+        CrashReporter.clear(context)
+        crash = null
+    }
+    AlertDialog(
+        onDismissRequest = dismiss,
+        title = { Text("L'appli s'est fermée") },
+        text = {
+            Column {
+                Text("Copie ce rapport et envoie-le pour qu'on corrige le problème.")
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    report,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .heightIn(max = 280.dp)
+                        .verticalScroll(rememberScrollState()),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                clipboard.setText(AnnotatedString(report))
+                Toast.makeText(context, "Rapport copié", Toast.LENGTH_SHORT).show()
+                dismiss()
+            }) { Text("Copier") }
+        },
+        dismissButton = { TextButton(onClick = dismiss) { Text("Fermer") } },
+    )
 }
 
 private object Routes {
