@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "790411185714",
+    "project_id": "zynora-bb32b",
+    "storage_bucket": "zynora-bb32b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:790411185714:android:42a432b717f2bdbe2bf62b",
+        "android_client_info": {
+          "package_name": "com.misterwhite.iptvsmart"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "790411185714-015m190eapnin30uu0am0knkca5p40pt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.misterwhite.iptvsmart",
+            "certificate_hash": "426a791335255e4cd482d76b731fd00f5aa750a7"
+          }
+        },
+        {
+          "client_id": "790411185714-dkav768emj25q2uf9ke8592n3ec357kl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.misterwhite.iptvsmart",
+            "certificate_hash": "f378a71e8bdc115d35d9861d31713cb1b2549908"
+          }
+        },
+        {
+          "client_id": "790411185714-l89g83mki3shlq5s4bogms7fat1sgl9b.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuOufZCen_zqXArSiA_fQAfimEquiYpxw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "790411185714-l89g83mki3shlq5s4bogms7fat1sgl9b.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
