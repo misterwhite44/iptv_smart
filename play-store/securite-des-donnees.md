@@ -30,7 +30,7 @@ journaux de plantage (le rapport de plantage reste sur le téléphone), identifi
 
 | Champ | Contenu |
 | --- | --- |
-| Responsable | [NOM DU RESPONSABLE], [EMAIL DE CONTACT] |
+| Responsable | Louis Boucard, louis44.boucard@proton.me |
 | Traitement | Gestion des comptes utilisateurs de l'appli Zynora |
 | Finalités | Création et connexion au compte, sauvegarde des favoris, gestion de l'abonnement Premium |
 | Base légale | Exécution du contrat (art. 6.1.b) |
