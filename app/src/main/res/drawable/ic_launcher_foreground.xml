@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Écran de télé -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="4"
+        android:pathData="M32,38 L76,38 Q80,38 80,42 L80,68 Q80,72 76,72 L32,72 Q28,72 28,68 L28,42 Q28,38 32,38 Z" />
+    <!-- Bouton lecture -->
+    <path
+        android:fillColor="#FF1E90FF"
+        android:pathData="M48,46 L64,55 L48,64 Z" />
+    <!-- Pied -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M44,76 L64,76 L64,80 L44,80 Z" />
+</vector>
