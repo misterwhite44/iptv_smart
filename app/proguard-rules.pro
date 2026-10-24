@@ -4,6 +4,8 @@
 
 # Tink (chiffrement des identifiants) lit ses messages protobuf par réflexion.
 -keep class com.google.crypto.tink.** { *; }
+-dontwarn com.google.api.client.**
+-dontwarn org.joda.time.**
 -keepclassmembers class * extends com.google.crypto.tink.shaded.protobuf.GeneratedMessageLite { <fields>; }
 
 # Classe chargée par son nom depuis le manifeste par le framework Cast.
