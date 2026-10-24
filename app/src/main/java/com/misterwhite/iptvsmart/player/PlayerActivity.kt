@@ -165,7 +165,7 @@ class PlayerActivity : FragmentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         activePlayer?.let {
-            outState.putInt(STATE_INDEX, it.currentMediaItemIndex)
+            outState.putInt(STATE_INDEX, currentItemIndex())
             outState.putLong(STATE_POSITION, it.currentPosition)
         } ?: run {
             outState.putInt(STATE_INDEX, currentIndex)
@@ -196,7 +196,8 @@ class PlayerActivity : FragmentActivity() {
         exo.setMediaItems(items.indices.map { mediaItem(it) }, currentIndex, startPosition)
         exo.addListener(listener)
         exo.playWhenReady = !isCasting.value
-        exo.prepare()
+        // Pendant un cast, le téléphone ne se connecte pas au flux.
+        if (!isCasting.value) exo.prepare()
 
         player = exo
         if (!isCasting.value) playerView?.player = exo
@@ -212,6 +213,8 @@ class PlayerActivity : FragmentActivity() {
         if (!isCasting.value) {
             currentIndex = exo.currentMediaItemIndex
             resumePositionMs = exo.currentPosition
+        } else {
+            currentIndex = castIndex
         }
         exo.removeListener(listener)
         exo.release()
@@ -251,53 +254,105 @@ class PlayerActivity : FragmentActivity() {
         override fun onCastSessionUnavailable() = stopCasting()
     }
 
+    /** Élément de la file lu par la Chromecast (elle ne reçoit qu'un élément à la fois). */
+    private var castIndex = 0
+    private var castRetries = 0
+    private val castRetry = Runnable { castItem(castIndex, castPlayer?.currentPosition ?: 0L) }
+
     private val castListener = object : Player.Listener {
-        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+        override fun onPlaybackStateChanged(playbackState: Int) {
             if (!isCasting.value) return
-            val index = castPlayer?.currentMediaItemIndex ?: return
-            trackedIndex = index
-            onItemStarted(index)
+            when (playbackState) {
+                Player.STATE_READY -> {
+                    castRetries = 0
+                    error.value = null
+                }
+                // Fin d'un épisode : on envoie le suivant.
+                Player.STATE_ENDED -> {
+                    val item = items.getOrNull(castIndex)
+                    if (item != null && item.kind != MediaKind.LIVE && castIndex + 1 < items.size) {
+                        library.entry(item.key)?.let {
+                            library.record(it.copy(positionMs = it.durationMs, updatedAt = System.currentTimeMillis()))
+                        }
+                        castItem(castIndex + 1, 0L)
+                    }
+                }
+            }
         }
 
         override fun onPlayerError(e: PlaybackException) {
-            if (isCasting.value) {
-                error.value = "La Chromecast n'arrive pas à lire ce flux. Certains formats ne passent qu'en lecture sur le téléphone."
+            if (!isCasting.value) return
+            // Souvent une erreur 429 : le serveur n'a pas encore libéré la
+            // connexion du téléphone. On réessaie un peu plus tard.
+            if (castRetries < MAX_CAST_RETRIES) {
+                castRetries++
+                error.value = null
+                handler.removeCallbacks(castRetry)
+                handler.postDelayed(castRetry, CAST_RETRY_DELAY_MS * castRetries)
+            } else {
+                error.value = "La Chromecast n'arrive pas à lire ce flux. Le serveur limite peut-être le nombre " +
+                    "de connexions : vérifie qu'aucun autre appareil ne regarde avec ton compte."
             }
         }
     }
 
+    /** Index réel dans la file de l'élément en cours, sur le téléphone ou la Chromecast. */
+    private fun currentItemIndex(): Int =
+        if (isCasting.value) castIndex else player?.currentMediaItemIndex ?: currentIndex
+
     /** Envoie la lecture en cours sur la Chromecast, à la même position. */
     private fun startCasting() {
-        val cast = castPlayer ?: return
         val local = player
         val index = local?.currentMediaItemIndex ?: currentIndex
         val item = items.getOrNull(index) ?: return
         val position = if (item.kind == MediaKind.LIVE) 0L else (local?.currentPosition ?: resumePositionMs.coerceAtLeast(0))
         saveProgress()
-        local?.pause()
+        // stop() ferme la connexion du téléphone au serveur : la plupart des
+        // abonnements n'autorisent qu'une connexion à la fois.
+        local?.stop()
         isCasting.value = true
         error.value = null
-        cast.setMediaItems(items.indices.map { mediaItem(it, forCast = true) }, index, position)
-        cast.playWhenReady = true
-        cast.prepare()
-        playerView?.player = cast
+        castRetries = 0
+        playerView?.player = castPlayer
+        castIndex = index
         trackedIndex = index
         onItemStarted(index)
+        handler.removeCallbacks(castRetry)
+        handler.postDelayed({ castItem(index, position) }, CAST_HANDOFF_DELAY_MS)
+    }
+
+    private fun castItem(index: Int, positionMs: Long) {
+        val cast = castPlayer ?: return
+        if (!isCasting.value || index !in items.indices) return
+        castIndex = index
+        trackedIndex = index
+        onItemStarted(index)
+        val item = items[index]
+        cast.setMediaItem(mediaItem(index, forCast = true), if (item.kind == MediaKind.LIVE) 0L else positionMs)
+        cast.playWhenReady = true
+        cast.prepare()
     }
 
     /** Reprend sur le téléphone là où la Chromecast s'est arrêtée. */
     private fun stopCasting() {
         if (!isCasting.value) return
-        val cast = castPlayer
-        val index = cast?.currentMediaItemIndex ?: currentIndex
-        val position = cast?.currentPosition ?: 0L
+        handler.removeCallbacks(castRetry)
+        val index = castIndex
+        val position = castPlayer?.currentPosition ?: 0L
         saveProgress()
         isCasting.value = false
+        error.value = null
         val local = player ?: return
         playerView?.player = local
         val item = items.getOrNull(index)
         if (item?.kind == MediaKind.LIVE) local.seekToDefaultPosition(index) else local.seekTo(index, position)
-        local.play()
+        // Laisse au serveur le temps de libérer la connexion de la Chromecast.
+        handler.postDelayed({
+            if (!isCasting.value && player === local) {
+                local.prepare()
+                local.play()
+            }
+        }, CAST_HANDOFF_DELAY_MS)
     }
 
     private val listener = object : Player.Listener {
@@ -351,7 +406,7 @@ class PlayerActivity : FragmentActivity() {
 
     private fun saveProgress() {
         val exo = activePlayer ?: return
-        val item = items.getOrNull(exo.currentMediaItemIndex) ?: return
+        val item = items.getOrNull(currentItemIndex()) ?: return
         if (item.kind == MediaKind.LIVE) return
         val duration = exo.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: return
         record(item, exo.currentPosition, duration)
@@ -375,7 +430,7 @@ class PlayerActivity : FragmentActivity() {
         )
     }
 
-    private fun currentItem(): PlayItem? = items.getOrNull(activePlayer?.currentMediaItemIndex ?: currentIndex)
+    private fun currentItem(): PlayItem? = items.getOrNull(currentItemIndex())
 
     private fun toggleFavorite() {
         val item = currentItem() ?: return
@@ -523,8 +578,13 @@ class PlayerActivity : FragmentActivity() {
                     Spacer(Modifier.height(16.dp))
                     Button(onClick = {
                         error.value = null
-                        activePlayer?.prepare()
-                        activePlayer?.play()
+                        if (isCasting.value) {
+                            castRetries = 0
+                            castItem(castIndex, castPlayer?.currentPosition ?: 0L)
+                        } else {
+                            player?.prepare()
+                            player?.play()
+                        }
                     }) { Text("Réessayer") }
                 }
             }
@@ -541,5 +601,8 @@ class PlayerActivity : FragmentActivity() {
         private const val STATE_INDEX = "index"
         private const val STATE_POSITION = "position"
         private const val SAVE_INTERVAL_MS = 5_000L
+        private const val CAST_HANDOFF_DELAY_MS = 1_500L
+        private const val CAST_RETRY_DELAY_MS = 3_000L
+        private const val MAX_CAST_RETRIES = 3
     }
 }
