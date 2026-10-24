@@ -62,6 +62,7 @@ import androidx.media3.cast.SessionAvailabilityListener
 import androidx.compose.material.icons.filled.Cast
 import com.misterwhite.iptvsmart.cast.CastButton
 import com.misterwhite.iptvsmart.cast.CastSupport
+import com.misterwhite.iptvsmart.cast.IptvMediaItemConverter
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -130,7 +131,7 @@ class PlayerActivity : FragmentActivity() {
 
         CastSupport.castContext(this)?.let { context ->
             castAvailable = true
-            castPlayer = CastPlayer(context).apply {
+            castPlayer = CastPlayer(context, IptvMediaItemConverter()).apply {
                 setSessionAvailabilityListener(castSessionListener)
                 addListener(castListener)
             }
@@ -228,7 +229,7 @@ class PlayerActivity : FragmentActivity() {
         val url = if (!forCast && index in usedFallback && item.fallbackUrl != null) item.fallbackUrl else item.url
         return MediaItem.Builder()
             .setUri(url)
-            .setMediaId(index.toString())
+            .setMediaId(if (item.kind == MediaKind.LIVE) IptvMediaItemConverter.LIVE_PREFIX + index else "item:$index")
             .setMimeType(mimeTypeOf(url))
             .setMediaMetadata(
                 MediaMetadata.Builder()
@@ -259,12 +260,21 @@ class PlayerActivity : FragmentActivity() {
     private var castRetries = 0
     private val castRetry = Runnable { castItem(castIndex, castPlayer?.currentPosition ?: 0L) }
 
+    /** Si la télé n'a toujours rien lancé après un moment, on le dit au lieu d'attendre en silence. */
+    private val castWatchdog = Runnable {
+        if (isCasting.value && castPlayer?.playbackState != Player.STATE_READY) {
+            error.value = "La Chromecast n'arrive pas à démarrer ce flux. Essaie une autre chaîne ou un film : " +
+                "certains fournisseurs bloquent la lecture directe sur la télé."
+        }
+    }
+
     private val castListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             if (!isCasting.value) return
             when (playbackState) {
                 Player.STATE_READY -> {
                     castRetries = 0
+                    handler.removeCallbacks(castWatchdog)
                     error.value = null
                 }
                 // Fin d'un épisode : on envoie le suivant.
@@ -331,12 +341,15 @@ class PlayerActivity : FragmentActivity() {
         cast.setMediaItem(mediaItem(index, forCast = true), if (item.kind == MediaKind.LIVE) 0L else positionMs)
         cast.playWhenReady = true
         cast.prepare()
+        handler.removeCallbacks(castWatchdog)
+        handler.postDelayed(castWatchdog, CAST_WATCHDOG_MS)
     }
 
     /** Reprend sur le téléphone là où la Chromecast s'est arrêtée. */
     private fun stopCasting() {
         if (!isCasting.value) return
         handler.removeCallbacks(castRetry)
+        handler.removeCallbacks(castWatchdog)
         val index = castIndex
         val position = castPlayer?.currentPosition ?: 0L
         saveProgress()
@@ -604,5 +617,6 @@ class PlayerActivity : FragmentActivity() {
         private const val CAST_HANDOFF_DELAY_MS = 1_500L
         private const val CAST_RETRY_DELAY_MS = 3_000L
         private const val MAX_CAST_RETRIES = 3
+        private const val CAST_WATCHDOG_MS = 25_000L
     }
 }

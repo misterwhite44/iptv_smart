@@ -31,6 +31,9 @@ import com.misterwhite.iptvsmart.data.FavoriteEntry
 import com.misterwhite.iptvsmart.data.LibraryRepository
 import com.misterwhite.iptvsmart.data.MediaKind
 import com.misterwhite.iptvsmart.player.Playback
+import com.misterwhite.iptvsmart.cast.CastSupport
+import com.google.android.gms.cast.framework.CastState
+import com.google.android.gms.cast.framework.CastStateListener
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -53,6 +56,29 @@ import com.misterwhite.iptvsmart.ui.theme.IptvTheme
 
 // FragmentActivity : le choix de la Chromecast s'ouvre dans une boîte de dialogue à fragments.
 class MainActivity : FragmentActivity() {
+    private var lastCastState = CastState.NO_DEVICES_AVAILABLE
+
+    // Connecté depuis l'accueil, la télé n'a encore rien à lire : on l'explique.
+    private val castStateListener = CastStateListener { state ->
+        if (state == CastState.CONNECTED && lastCastState != CastState.CONNECTED) {
+            Toast.makeText(this, "Chromecast connectée : choisis un film, un épisode ou une chaîne.", Toast.LENGTH_LONG).show()
+        }
+        lastCastState = state
+    }
+
+    override fun onResume() {
+        super.onResume()
+        CastSupport.castContext(this)?.let {
+            lastCastState = it.castState
+            it.addCastStateListener(castStateListener)
+        }
+    }
+
+    override fun onPause() {
+        CastSupport.castContext(this)?.removeCastStateListener(castStateListener)
+        super.onPause()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
