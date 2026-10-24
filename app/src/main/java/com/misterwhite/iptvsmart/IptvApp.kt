@@ -8,6 +8,8 @@ import com.misterwhite.iptvsmart.data.CredentialsStore
 import com.misterwhite.iptvsmart.data.LibraryRepository
 import com.misterwhite.iptvsmart.data.account.AccountRepository
 import com.misterwhite.iptvsmart.data.account.FavoritesSync
+import com.misterwhite.iptvsmart.data.billing.BillingRepository
+import com.misterwhite.iptvsmart.data.billing.PremiumRepository
 import com.misterwhite.iptvsmart.data.xtream.XtreamClient
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -50,6 +52,7 @@ class AppContainer(app: Application) {
     val library = LibraryRepository(app)
     val account = AccountRepository(app)
     val favoritesSync = FavoritesSync(account, library)
+    val premium = PremiumRepository(app, account, BillingRepository(app))
 
     companion object {
         const val USER_AGENT = "Mozilla/5.0 (Linux; Android) Zynora/1.0"

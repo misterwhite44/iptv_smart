@@ -23,9 +23,12 @@ import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /** Le compte Zynora connecté (Firebase). */
@@ -106,6 +109,14 @@ class AccountRepository(private val context: Context) {
         userDoc.collection(LIBRARY).document(FAVORITES).delete().await()
         userDoc.delete().await()
         user.delete().await()
+    }
+
+    /** Suit le drapeau « vip » de la fiche du compte, posé à la main dans la console Firebase. */
+    fun observeVip(uid: String): Flow<Boolean> = callbackFlow {
+        val registration = requireDb().collection(USERS).document(uid).addSnapshotListener { snapshot, _ ->
+            trySend(snapshot?.getBoolean("vip") == true)
+        }
+        awaitClose { registration.remove() }
     }
 
     /** Favoris enregistrés sur le compte, ou null s'il n'y en a pas encore. */

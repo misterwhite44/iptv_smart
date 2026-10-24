@@ -34,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -60,7 +61,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.cast.CastPlayer
 import androidx.media3.cast.SessionAvailabilityListener
 import androidx.compose.material.icons.filled.Cast
-import com.misterwhite.iptvsmart.cast.CastButton
+import com.misterwhite.iptvsmart.ui.premium.LocalPremium
+import com.misterwhite.iptvsmart.ui.premium.PremiumCastButton
 import com.misterwhite.iptvsmart.cast.CastSupport
 import com.misterwhite.iptvsmart.cast.IptvMediaItemConverter
 import androidx.media3.datasource.okhttp.OkHttpDataSource
@@ -138,7 +140,9 @@ class PlayerActivity : FragmentActivity() {
         }
 
         setContent {
-            IptvTheme { PlayerScreen() }
+            CompositionLocalProvider(LocalPremium provides container.premium) {
+                IptvTheme { PlayerScreen() }
+            }
         }
     }
 
@@ -607,7 +611,7 @@ class PlayerActivity : FragmentActivity() {
     /** Emplacement pour des boutons en plus dans la barre du haut (Chromecast). */
     @Composable
     private fun PlayerExtraActions() {
-        if (castAvailable) CastButton(Modifier.padding(horizontal = 4.dp))
+        if (castAvailable) PremiumCastButton(Modifier.padding(horizontal = 4.dp))
     }
 
     companion object {
