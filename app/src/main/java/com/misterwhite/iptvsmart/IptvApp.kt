@@ -5,6 +5,7 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.data.CredentialsStore
+import com.misterwhite.iptvsmart.data.LibraryRepository
 import com.misterwhite.iptvsmart.data.xtream.XtreamClient
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
@@ -43,6 +44,7 @@ class AppContainer(app: Application) {
     val credentialsStore = CredentialsStore(app)
     val xtreamClient = XtreamClient(httpClient)
     val catalog = CatalogRepository(xtreamClient, credentialsStore)
+    val library = LibraryRepository(app)
 
     companion object {
         const val USER_AGENT = "Mozilla/5.0 (Linux; Android) IPTVSmart/1.0"

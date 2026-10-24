@@ -29,6 +29,8 @@ fun MovieDetailScreen(
     onPlay: (MovieDetails) -> Unit,
     /** Avancement déjà regardé, entre 0 et 1, s'il y en a un. */
     progress: Float? = null,
+    isFavorite: Boolean = false,
+    onToggleFavorite: (MovieDetails) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     Column(Modifier.fillMaxSize().background(IptvColors.Background)) {
@@ -63,6 +65,8 @@ fun MovieDetailScreen(
                             Spacer(Modifier.height(8.dp))
                             ProgressBar(progress)
                         }
+                        Spacer(Modifier.height(10.dp))
+                        FavoriteButton(isFavorite, onClick = { onToggleFavorite(d) })
                         Spacer(Modifier.height(18.dp))
                         if (!d.plot.isNullOrBlank()) {
                             Text(d.plot, style = MaterialTheme.typography.bodyLarge)

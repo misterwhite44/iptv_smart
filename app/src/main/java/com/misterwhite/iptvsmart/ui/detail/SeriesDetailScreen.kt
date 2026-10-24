@@ -52,13 +52,15 @@ fun SeriesDetailScreen(
     episodeProgress: Map<String, Float> = emptyMap(),
     /** Épisode à reprendre en priorité (le dernier regardé). */
     resumeEpisodeId: String? = null,
+    isFavorite: Boolean = false,
+    onToggleFavorite: (SeriesDetails) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     Box(Modifier.fillMaxSize().background(IptvColors.Background)) {
         when (val s = state) {
             DetailState.Loading -> LoadingBox()
             is DetailState.Error -> ErrorBox(s.message, onRetry = viewModel::load)
-            is DetailState.Ready -> SeriesContent(s.details, onBack, onPlayEpisode, episodeProgress, resumeEpisodeId)
+            is DetailState.Ready -> SeriesContent(s.details, onBack, onPlayEpisode, episodeProgress, resumeEpisodeId, isFavorite, onToggleFavorite)
         }
     }
 }
@@ -70,6 +72,8 @@ private fun SeriesContent(
     onPlayEpisode: (SeriesDetails, Episode) -> Unit,
     episodeProgress: Map<String, Float>,
     resumeEpisodeId: String?,
+    isFavorite: Boolean,
+    onToggleFavorite: (SeriesDetails) -> Unit,
 ) {
     val seasons = d.seasons.keys.toList()
     val allEpisodes = d.seasons.values.flatten()
@@ -103,8 +107,10 @@ private fun SeriesContent(
                         if (resume != null) "REPRENDRE S${resume.season} É${resume.number}" else "LECTURE S${first.season} É${first.number}",
                         onClick = { onPlayEpisode(d, first) },
                     )
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(10.dp))
                 }
+                FavoriteButton(isFavorite, onClick = { onToggleFavorite(d) })
+                Spacer(Modifier.height(16.dp))
                 if (!d.series.plot.isNullOrBlank()) {
                     Text(d.series.plot, style = MaterialTheme.typography.bodyLarge)
                     Spacer(Modifier.height(10.dp))

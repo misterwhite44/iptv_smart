@@ -24,6 +24,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.misterwhite.iptvsmart.data.FavoriteEntry
+import com.misterwhite.iptvsmart.data.LibraryRepository
+import com.misterwhite.iptvsmart.data.MediaKind
+import com.misterwhite.iptvsmart.data.WatchEntry
 import com.misterwhite.iptvsmart.ui.components.ErrorBox
 import com.misterwhite.iptvsmart.ui.components.LoadingBox
 import com.misterwhite.iptvsmart.ui.theme.IptvColors
@@ -34,7 +38,18 @@ class MainActions(
     val openSeries: (String) -> Unit,
     val playChannel: (String) -> Unit,
     val openAccount: () -> Unit,
+    /** Reprend une lecture depuis « Reprendre la lecture ». */
+    val resume: (WatchEntry) -> Unit,
 )
+
+/** Historique et favoris, partagés par les onglets. */
+data class LibraryState(
+    val history: List<WatchEntry>,
+    val favorites: List<FavoriteEntry>,
+) {
+    fun favoriteIds(kind: MediaKind): Set<String> =
+        favorites.filter { it.kind == kind }.mapTo(HashSet()) { it.contentId }
+}
 
 private enum class Tab(val label: String, val icon: ImageVector) {
     HOME("Accueil", Icons.Filled.Home),
@@ -45,8 +60,11 @@ private enum class Tab(val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun MainScreen(viewModel: MainViewModel, actions: MainActions) {
+fun MainScreen(viewModel: MainViewModel, library: LibraryRepository, actions: MainActions) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val history by library.history.collectAsStateWithLifecycle()
+    val favorites by library.favorites.collectAsStateWithLifecycle()
+    val libraryState = LibraryState(history, favorites)
     var tabIndex by rememberSaveable { mutableIntStateOf(0) }
     val tab = Tab.entries[tabIndex]
 
@@ -82,10 +100,10 @@ fun MainScreen(viewModel: MainViewModel, actions: MainActions) {
                 CatalogState.Loading -> LoadingBox(message = "Chargement du catalogue…")
                 is CatalogState.Error -> ErrorBox(s.message, onRetry = { viewModel.load(force = true) })
                 is CatalogState.Ready -> when (tab) {
-                    Tab.HOME -> HomeTab(s.content, actions)
-                    Tab.LIVE -> LiveTab(s.content.live, actions)
-                    Tab.MOVIES -> MoviesTab(s.content.movies, actions)
-                    Tab.SERIES -> SeriesTab(s.content.series, actions)
+                    Tab.HOME -> HomeTab(s.content, libraryState, actions)
+                    Tab.LIVE -> LiveTab(s.content.live, libraryState.favoriteIds(MediaKind.LIVE), actions)
+                    Tab.MOVIES -> MoviesTab(s.content.movies, libraryState.favoriteIds(MediaKind.MOVIE), actions)
+                    Tab.SERIES -> SeriesTab(s.content.series, libraryState.favoriteIds(MediaKind.SERIES), actions)
                     Tab.SEARCH -> SearchTab(s.content, actions)
                 }
             }

@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.data.CredentialsStore
+import com.misterwhite.iptvsmart.data.LibraryRepository
 import com.misterwhite.iptvsmart.data.xtream.AccountInfo
 import com.misterwhite.iptvsmart.data.xtream.ContentType
 import com.misterwhite.iptvsmart.data.xtream.XtreamClient
@@ -30,6 +31,7 @@ class AccountViewModel(
     private val client: XtreamClient,
     private val store: CredentialsStore,
     private val catalog: CatalogRepository,
+    private val library: LibraryRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<AccountUiState>(AccountUiState.Loading)
@@ -49,6 +51,7 @@ class AccountViewModel(
                     val live = async { client.categories(credentials, ContentType.LIVE) }
                     val movies = async { client.categories(credentials, ContentType.MOVIE) }
                     val series = async { client.categories(credentials, ContentType.SERIES) }
+                    store.saveLiveFormat(account.await().allowedOutputFormats)
                     AccountUiState.Ready(
                         account = account.await(),
                         liveCategories = live.await().size,
@@ -67,5 +70,6 @@ class AccountViewModel(
     fun logout() {
         store.clear()
         catalog.clear()
+        library.clear()
     }
 }

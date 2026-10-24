@@ -42,6 +42,8 @@ import com.misterwhite.iptvsmart.ui.components.ChannelCard
 import com.misterwhite.iptvsmart.ui.components.ContentRow
 import com.misterwhite.iptvsmart.ui.components.PosterCard
 import com.misterwhite.iptvsmart.ui.components.RemoteImage
+import com.misterwhite.iptvsmart.ui.components.WideCard
+import com.misterwhite.iptvsmart.data.MediaKind
 import com.misterwhite.iptvsmart.ui.theme.IptvColors
 import kotlinx.coroutines.delay
 
@@ -57,9 +59,19 @@ private data class Featured(
 @Composable
 fun HomeTab(
     content: CatalogRepository.Content,
+    library: LibraryState,
     actions: MainActions,
-    continueWatching: @Composable () -> Unit = {},
 ) {
+    // Un seul élément par série : le dernier épisode regardé.
+    val continueWatching = remember(library.history) {
+        library.history
+            .filter { it.isResumable }
+            .distinctBy { it.seriesId ?: it.key }
+            .take(20)
+    }
+    val recentChannels = remember(library.history) {
+        library.history.filter { it.kind == MediaKind.LIVE }.take(20)
+    }
     val recentMovies = remember(content) {
         content.movies.items.sortedByDescending { it.addedAt }.take(30)
     }
@@ -100,7 +112,29 @@ fun HomeTab(
                 TopBar(actions.openAccount, Modifier.align(Alignment.TopStart))
             }
         }
-        item(key = "continue") { continueWatching() }
+        item(key = "continue") {
+            ContentRow("Reprendre la lecture", continueWatching, key = { it.key }) { entry ->
+                WideCard(
+                    title = entry.title,
+                    subtitle = entry.subtitle,
+                    imageUrl = entry.image,
+                    progress = entry.progress,
+                    onClick = { actions.resume(entry) },
+                )
+            }
+        }
+        item(key = "favorites") {
+            ContentRow("Ma liste", library.favorites.filter { it.kind != MediaKind.LIVE }, key = { it.key }) { fav ->
+                PosterCard(fav.title, fav.image, onClick = {
+                    if (fav.kind == MediaKind.SERIES) actions.openSeries(fav.contentId) else actions.openMovie(fav.contentId)
+                })
+            }
+        }
+        item(key = "recentChannels") {
+            ContentRow("Chaînes récentes", recentChannels, key = { it.key }) { entry ->
+                ChannelCard(entry.title, entry.image, onClick = { actions.playChannel(entry.contentId) })
+            }
+        }
         item(key = "recentMovies") {
             ContentRow("Films récemment ajoutés", recentMovies, key = { it.id }) { movie ->
                 PosterCard(movie.name, movie.poster, onClick = { actions.openMovie(movie.id) })

@@ -2,13 +2,18 @@ package com.misterwhite.iptvsmart
 
 import android.graphics.Color
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.misterwhite.iptvsmart.data.FavoriteEntry
+import com.misterwhite.iptvsmart.data.LibraryRepository
+import com.misterwhite.iptvsmart.data.MediaKind
+import com.misterwhite.iptvsmart.player.Playback
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -61,10 +66,9 @@ private object Routes {
 private fun AppNavigation(container: AppContainer) {
     val navController = rememberNavController()
     val context = LocalContext.current
+    val playback = remember { Playback(context, container) }
+    val library = container.library
     val start = remember { if (container.credentialsStore.load() != null) Routes.MAIN else Routes.LOGIN }
-    val comingSoon = {
-        Toast.makeText(context, "Le lecteur arrive à la prochaine étape.", Toast.LENGTH_SHORT).show()
-    }
 
     NavHost(navController = navController, startDestination = start) {
         composable(Routes.LOGIN) {
@@ -85,11 +89,20 @@ private fun AppNavigation(container: AppContainer) {
             )
             MainScreen(
                 vm,
+                library,
                 MainActions(
                     openMovie = { navController.navigate(Routes.movie(it)) },
                     openSeries = { navController.navigate(Routes.series(it)) },
-                    playChannel = { comingSoon() },
+                    playChannel = playback::playChannel,
                     openAccount = { navController.navigate(Routes.ACCOUNT) },
+                    resume = { entry ->
+                        when (entry.kind) {
+                            MediaKind.MOVIE -> playback.resumeMovie(entry)
+                            MediaKind.EPISODE -> entry.seriesId?.let { navController.navigate(Routes.series(it)) }
+                            MediaKind.LIVE -> playback.playChannel(entry.contentId)
+                            MediaKind.SERIES -> navController.navigate(Routes.series(entry.contentId))
+                        }
+                    },
                 ),
             )
         }
@@ -98,19 +111,52 @@ private fun AppNavigation(container: AppContainer) {
             val vm: MovieDetailViewModel = viewModel(
                 factory = viewModelFactory { initializer { MovieDetailViewModel(container.catalog, id) } }
             )
-            MovieDetailScreen(vm, onBack = { navController.popBackStack() }, onPlay = { comingSoon() })
+            val history by library.history.collectAsStateWithLifecycle()
+            val favorites by library.favorites.collectAsStateWithLifecycle()
+            val key = LibraryRepository.movieKey(id)
+            val watched = history.firstOrNull { it.key == key }?.takeIf { it.isResumable }
+            MovieDetailScreen(
+                vm,
+                onBack = { navController.popBackStack() },
+                onPlay = playback::playMovie,
+                progress = watched?.progress,
+                isFavorite = favorites.any { it.key == key },
+                onToggleFavorite = { d ->
+                    library.toggleFavorite(
+                        FavoriteEntry(key, MediaKind.MOVIE, d.movie.id, d.movie.name, d.movie.poster, System.currentTimeMillis())
+                    )
+                },
+            )
         }
         composable(Routes.SERIES) { entry ->
             val id = entry.arguments?.getString("id").orEmpty()
             val vm: SeriesDetailViewModel = viewModel(
                 factory = viewModelFactory { initializer { SeriesDetailViewModel(container.catalog, id) } }
             )
-            SeriesDetailScreen(vm, onBack = { navController.popBackStack() }, onPlayEpisode = { _, _ -> comingSoon() })
+            val history by library.history.collectAsStateWithLifecycle()
+            val favorites by library.favorites.collectAsStateWithLifecycle()
+            val key = LibraryRepository.seriesKey(id)
+            val seriesHistory = history.filter { it.kind == MediaKind.EPISODE && it.seriesId == id }
+            SeriesDetailScreen(
+                vm,
+                onBack = { navController.popBackStack() },
+                onPlayEpisode = playback::playEpisode,
+                episodeProgress = seriesHistory.mapNotNull { h -> h.progress?.let { h.contentId to it } }.toMap(),
+                resumeEpisodeId = seriesHistory.firstOrNull { it.isResumable }?.contentId,
+                isFavorite = favorites.any { it.key == key },
+                onToggleFavorite = { d ->
+                    library.toggleFavorite(
+                        FavoriteEntry(key, MediaKind.SERIES, d.series.id, d.series.name, d.series.cover, System.currentTimeMillis())
+                    )
+                },
+            )
         }
         composable(Routes.ACCOUNT) {
             val vm: AccountViewModel = viewModel(
                 factory = viewModelFactory {
-                    initializer { AccountViewModel(container.xtreamClient, container.credentialsStore, container.catalog) }
+                    initializer {
+                        AccountViewModel(container.xtreamClient, container.credentialsStore, container.catalog, library)
+                    }
                 }
             )
             AccountScreen(

@@ -17,6 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -94,6 +98,26 @@ fun DetailHeader(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun FavoriteButton(isFavorite: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    OutlinedButton(
+        onClick = onClick,
+        shape = RoundedCornerShape(6.dp),
+        border = BorderStroke(1.dp, IptvColors.TextSecondary),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(48.dp),
+    ) {
+        Icon(
+            if (isFavorite) Icons.Filled.Check else Icons.Filled.Add,
+            contentDescription = null,
+            tint = IptvColors.TextPrimary,
+        )
+        Spacer(Modifier.size(8.dp))
+        Text(if (isFavorite) "DANS MA LISTE" else "AJOUTER À MA LISTE", color = IptvColors.TextPrimary, fontWeight = FontWeight.Bold)
     }
 }
 

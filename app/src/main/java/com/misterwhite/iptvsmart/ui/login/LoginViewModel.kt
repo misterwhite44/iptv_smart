@@ -63,8 +63,9 @@ class LoginViewModel(
         _state.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
             try {
-                client.authenticate(credentials)
+                val account = client.authenticate(credentials)
                 store.save(credentials)
+                store.saveLiveFormat(account.allowedOutputFormats)
                 _state.update { it.copy(isLoading = false, loggedIn = true) }
             } catch (e: XtreamException) {
                 _state.update { it.copy(isLoading = false, error = e.message) }

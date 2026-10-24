@@ -32,10 +32,12 @@ import com.misterwhite.iptvsmart.ui.components.EmptyBox
 import com.misterwhite.iptvsmart.ui.components.PosterCard
 
 @Composable
-fun LiveTab(catalog: Catalog<LiveChannel>, actions: MainActions) {
+fun LiveTab(catalog: Catalog<LiveChannel>, favoriteIds: Set<String>, actions: MainActions) {
     BrowseLayout(
         title = "Direct",
         catalog = catalog,
+        favoriteIds = favoriteIds,
+        idOf = { it.id },
         categoryOf = { it.categoryId },
         minCellWidth = 150,
     ) { list ->
@@ -46,10 +48,12 @@ fun LiveTab(catalog: Catalog<LiveChannel>, actions: MainActions) {
 }
 
 @Composable
-fun MoviesTab(catalog: Catalog<Movie>, actions: MainActions) {
+fun MoviesTab(catalog: Catalog<Movie>, favoriteIds: Set<String>, actions: MainActions) {
     BrowseLayout(
         title = "Films",
         catalog = catalog,
+        favoriteIds = favoriteIds,
+        idOf = { it.id },
         categoryOf = { it.categoryId },
         minCellWidth = 105,
     ) { list ->
@@ -60,10 +64,12 @@ fun MoviesTab(catalog: Catalog<Movie>, actions: MainActions) {
 }
 
 @Composable
-fun SeriesTab(catalog: Catalog<Series>, actions: MainActions) {
+fun SeriesTab(catalog: Catalog<Series>, favoriteIds: Set<String>, actions: MainActions) {
     BrowseLayout(
         title = "Séries",
         catalog = catalog,
+        favoriteIds = favoriteIds,
+        idOf = { it.id },
         categoryOf = { it.categoryId },
         minCellWidth = 105,
     ) { list ->
@@ -78,6 +84,8 @@ fun SeriesTab(catalog: Catalog<Series>, actions: MainActions) {
 private fun <T> BrowseLayout(
     title: String,
     catalog: Catalog<T>,
+    favoriteIds: Set<String>,
+    idOf: (T) -> String,
     categoryOf: (T) -> String?,
     minCellWidth: Int,
     grid: androidx.compose.foundation.lazy.grid.LazyGridScope.(List<T>) -> Unit,
@@ -88,8 +96,13 @@ private fun <T> BrowseLayout(
         val used = catalog.items.mapNotNullTo(HashSet()) { categoryOf(it) }
         catalog.categories.filter { it.id in used }
     }
-    val items = remember(catalog, selected) {
-        if (selected == null) catalog.items else catalog.items.filter { categoryOf(it) == selected }
+    val chips = if (favoriteIds.isEmpty()) categories else listOf(Category(FAVORITES, "★ Favoris")) + categories
+    val items = remember(catalog, selected, favoriteIds) {
+        when (selected) {
+            null -> catalog.items
+            FAVORITES -> catalog.items.filter { idOf(it) in favoriteIds }
+            else -> catalog.items.filter { categoryOf(it) == selected }
+        }
     }
 
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -98,8 +111,8 @@ private fun <T> BrowseLayout(
             style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
         )
-        if (categories.isNotEmpty()) {
-            CategoryChips(categories, selected, onSelect = { selected = it })
+        if (chips.isNotEmpty()) {
+            CategoryChips(chips, selected, onSelect = { selected = it })
             Spacer(Modifier.height(8.dp))
         }
         if (items.isEmpty()) {
@@ -117,3 +130,5 @@ private fun <T> BrowseLayout(
         }
     }
 }
+
+private const val FAVORITES = "__favorites"
