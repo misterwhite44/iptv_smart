@@ -140,15 +140,18 @@ class XtreamClient(private val http: OkHttpClient) {
         )
     }
 
-    private fun JsonObject.toMovie(): Movie? = Movie(
-        id = str("stream_id") ?: return null,
-        name = str("name") ?: "Film",
-        poster = str("stream_icon"),
-        rating = str("rating")?.toDoubleOrNull()?.takeIf { it > 0 },
-        addedAt = long("added") ?: 0L,
-        categoryId = str("category_id"),
-        extension = str("container_extension") ?: "mp4",
-    )
+    private fun JsonObject.toMovie(): Movie? {
+        val id = str("stream_id") ?: return null
+        return Movie(
+            id = id,
+            name = str("name") ?: "Film",
+            poster = str("stream_icon"),
+            rating = str("rating")?.toDoubleOrNull()?.takeIf { it > 0 },
+            addedAt = long("added") ?: 0L,
+            categoryId = str("category_id"),
+            extension = str("container_extension") ?: "mp4",
+        )
+    }
 
     suspend fun categories(credentials: XtreamCredentials, type: ContentType): List<Category> {
         val action = when (type) {
