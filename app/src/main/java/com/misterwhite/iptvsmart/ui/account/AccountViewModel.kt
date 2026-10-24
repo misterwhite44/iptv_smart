@@ -1,7 +1,8 @@
-package com.misterwhite.iptvsmart.ui.home
+package com.misterwhite.iptvsmart.ui.account
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.data.CredentialsStore
 import com.misterwhite.iptvsmart.data.xtream.AccountInfo
 import com.misterwhite.iptvsmart.data.xtream.ContentType
@@ -14,24 +15,25 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-sealed interface HomeUiState {
-    data object Loading : HomeUiState
+sealed interface AccountUiState {
+    data object Loading : AccountUiState
     data class Ready(
         val account: AccountInfo,
         val liveCategories: Int,
         val movieCategories: Int,
         val seriesCategories: Int,
-    ) : HomeUiState
-    data class Error(val message: String) : HomeUiState
+    ) : AccountUiState
+    data class Error(val message: String) : AccountUiState
 }
 
-class HomeViewModel(
+class AccountViewModel(
     private val client: XtreamClient,
     private val store: CredentialsStore,
+    private val catalog: CatalogRepository,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
-    val state: StateFlow<HomeUiState> = _state.asStateFlow()
+    private val _state = MutableStateFlow<AccountUiState>(AccountUiState.Loading)
+    val state: StateFlow<AccountUiState> = _state.asStateFlow()
 
     init {
         refresh()
@@ -39,7 +41,7 @@ class HomeViewModel(
 
     fun refresh() {
         val credentials = store.load() ?: return
-        _state.value = HomeUiState.Loading
+        _state.value = AccountUiState.Loading
         viewModelScope.launch {
             _state.value = try {
                 coroutineScope {
@@ -47,7 +49,7 @@ class HomeViewModel(
                     val live = async { client.categories(credentials, ContentType.LIVE) }
                     val movies = async { client.categories(credentials, ContentType.MOVIE) }
                     val series = async { client.categories(credentials, ContentType.SERIES) }
-                    HomeUiState.Ready(
+                    AccountUiState.Ready(
                         account = account.await(),
                         liveCategories = live.await().size,
                         movieCategories = movies.await().size,
@@ -55,14 +57,15 @@ class HomeViewModel(
                     )
                 }
             } catch (e: XtreamException) {
-                HomeUiState.Error(e.message ?: "Erreur inconnue")
+                AccountUiState.Error(e.message ?: "Erreur inconnue")
             } catch (e: Exception) {
-                HomeUiState.Error("Erreur inattendue : ${e.message}")
+                AccountUiState.Error("Erreur inattendue : ${e.message}")
             }
         }
     }
 
     fun logout() {
         store.clear()
+        catalog.clear()
     }
 }

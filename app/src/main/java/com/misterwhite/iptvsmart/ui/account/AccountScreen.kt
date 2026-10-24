@@ -1,4 +1,4 @@
-package com.misterwhite.iptvsmart.ui.home
+package com.misterwhite.iptvsmart.ui.account
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +14,11 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -32,9 +36,9 @@ import com.misterwhite.iptvsmart.ui.theme.IptvColors
 import java.text.DateFormat
 import java.util.Date
 
-/** Accueil provisoire de l'étape 1 : remplacé par le catalogue à l'étape 2. */
+/** Infos de l'abonnement et déconnexion. */
 @Composable
-fun HomeScreen(viewModel: HomeViewModel, onLoggedOut: () -> Unit) {
+fun AccountScreen(viewModel: AccountViewModel, onBack: () -> Unit, onLoggedOut: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     Box(
@@ -44,11 +48,11 @@ fun HomeScreen(viewModel: HomeViewModel, onLoggedOut: () -> Unit) {
             .systemBarsPadding(),
     ) {
         when (val s = state) {
-            HomeUiState.Loading -> CircularProgressIndicator(
+            AccountUiState.Loading -> CircularProgressIndicator(
                 color = IptvColors.Accent,
                 modifier = Modifier.align(Alignment.Center),
             )
-            is HomeUiState.Error -> Column(
+            is AccountUiState.Error -> Column(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(24.dp),
@@ -60,15 +64,21 @@ fun HomeScreen(viewModel: HomeViewModel, onLoggedOut: () -> Unit) {
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(onClick = { viewModel.logout(); onLoggedOut() }) { Text("Se déconnecter") }
             }
-            is HomeUiState.Ready -> Column(
+            is AccountUiState.Ready -> Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Text("IPTV Smart", style = MaterialTheme.typography.headlineLarge)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                    }
+                    Text("Mon compte", style = MaterialTheme.typography.headlineLarge)
+                }
                 AccountCard(s.account)
+                Text("Catalogue", style = MaterialTheme.typography.titleMedium)
                 CountCard("Chaînes en direct", s.liveCategories)
                 CountCard("Films", s.movieCategories)
                 CountCard("Séries", s.seriesCategories)

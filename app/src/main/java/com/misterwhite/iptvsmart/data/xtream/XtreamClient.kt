@@ -3,6 +3,8 @@ package com.misterwhite.iptvsmart.data.xtream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import okhttp3.HttpUrl
@@ -43,8 +45,110 @@ class XtreamClient(private val http: OkHttpClient) {
             maxConnections = user.int("max_connections"),
             activeConnections = user.int("active_cons"),
             isTrial = user.bool("is_trial"),
+            allowedOutputFormats = (user["allowed_output_formats"] as? JsonArray)
+                ?.mapNotNull { (it as? JsonPrimitive)?.content }
+                .orEmpty(),
         )
     }
+
+    suspend fun liveChannels(credentials: XtreamCredentials): List<LiveChannel> =
+        request(credentials, "get_live_streams").objects().mapNotNull { o ->
+            LiveChannel(
+                id = o.str("stream_id") ?: return@mapNotNull null,
+                name = o.str("name") ?: "Chaîne",
+                logo = o.str("stream_icon"),
+                categoryId = o.str("category_id"),
+                epgChannelId = o.str("epg_channel_id"),
+            )
+        }
+
+    suspend fun movies(credentials: XtreamCredentials): List<Movie> =
+        request(credentials, "get_vod_streams").objects().mapNotNull { it.toMovie() }
+
+    suspend fun series(credentials: XtreamCredentials): List<Series> =
+        request(credentials, "get_series").objects().mapNotNull { o ->
+            Series(
+                id = o.str("series_id") ?: return@mapNotNull null,
+                name = o.str("name") ?: "Série",
+                cover = o.str("cover"),
+                backdrop = o.firstImage("backdrop_path"),
+                plot = o.str("plot"),
+                genre = o.str("genre"),
+                year = o.str("releaseDate")?.take(4) ?: o.str("release_date")?.take(4),
+                rating = o.str("rating")?.toDoubleOrNull()?.takeIf { it > 0 },
+                updatedAt = o.long("last_modified") ?: 0L,
+                categoryId = o.str("category_id"),
+            )
+        }
+
+    suspend fun movieDetails(credentials: XtreamCredentials, movie: Movie): MovieDetails {
+        val root = request(credentials, "get_vod_info", mapOf("vod_id" to movie.id)) as? JsonObject
+        val info = root?.obj("info")
+        val data = root?.obj("movie_data")
+        return MovieDetails(
+            movie = movie.copy(
+                poster = movie.poster ?: info?.str("movie_image") ?: info?.str("cover_big"),
+                extension = data?.str("container_extension") ?: movie.extension,
+            ),
+            backdrop = info?.firstImage("backdrop_path"),
+            plot = info?.str("plot") ?: info?.str("description"),
+            cast = info?.str("cast") ?: info?.str("actors"),
+            director = info?.str("director"),
+            genre = info?.str("genre"),
+            releaseDate = info?.str("releasedate") ?: info?.str("release_date"),
+            duration = info?.str("duration"),
+        )
+    }
+
+    suspend fun seriesDetails(credentials: XtreamCredentials, series: Series): SeriesDetails {
+        val root = request(credentials, "get_series_info", mapOf("series_id" to series.id)) as? JsonObject
+        val info = root?.obj("info")
+        val seasons = mutableMapOf<Int, List<Episode>>()
+        val episodes = root?.get("episodes")
+        val groups: List<Pair<String?, JsonElement>> = when (episodes) {
+            is JsonObject -> episodes.entries.map { it.key to it.value }
+            is JsonArray -> episodes.map { null to it }
+            else -> emptyList()
+        }
+        for ((key, value) in groups) {
+            val list = value.objects().mapNotNull { e ->
+                val epInfo = e.obj("info")
+                Episode(
+                    id = e.str("id") ?: return@mapNotNull null,
+                    season = e.int("season") ?: key?.toIntOrNull() ?: 1,
+                    number = e.int("episode_num") ?: 0,
+                    title = e.str("title") ?: "Épisode",
+                    extension = e.str("container_extension") ?: "mp4",
+                    image = epInfo?.str("movie_image") ?: epInfo?.str("cover_big"),
+                    plot = epInfo?.str("plot"),
+                    durationSecs = epInfo?.int("duration_secs"),
+                )
+            }
+            list.groupBy { it.season }.forEach { (season, eps) ->
+                seasons[season] = (seasons[season].orEmpty() + eps).sortedBy { it.number }
+            }
+        }
+        return SeriesDetails(
+            series = series.copy(
+                cover = series.cover ?: info?.str("cover"),
+                backdrop = series.backdrop ?: info?.firstImage("backdrop_path"),
+                plot = series.plot ?: info?.str("plot"),
+                genre = series.genre ?: info?.str("genre"),
+            ),
+            cast = info?.str("cast"),
+            seasons = seasons.toSortedMap(),
+        )
+    }
+
+    private fun JsonObject.toMovie(): Movie? = Movie(
+        id = str("stream_id") ?: return null,
+        name = str("name") ?: "Film",
+        poster = str("stream_icon"),
+        rating = str("rating")?.toDoubleOrNull()?.takeIf { it > 0 },
+        addedAt = long("added") ?: 0L,
+        categoryId = str("category_id"),
+        extension = str("container_extension") ?: "mp4",
+    )
 
     suspend fun categories(credentials: XtreamCredentials, type: ContentType): List<Category> {
         val action = when (type) {

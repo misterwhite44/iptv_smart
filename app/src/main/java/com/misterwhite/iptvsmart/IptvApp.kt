@@ -1,12 +1,15 @@
 package com.misterwhite.iptvsmart
 
 import android.app.Application
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.data.CredentialsStore
 import com.misterwhite.iptvsmart.data.xtream.XtreamClient
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
-class IptvApp : Application() {
+class IptvApp : Application(), ImageLoaderFactory {
     lateinit var container: AppContainer
         private set
 
@@ -14,6 +17,11 @@ class IptvApp : Application() {
         super.onCreate()
         container = AppContainer(this)
     }
+
+    override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
+        .okHttpClient(container.httpClient)
+        .crossfade(true)
+        .build()
 }
 
 /** Dépendances partagées par toute l'appli. */
@@ -34,6 +42,7 @@ class AppContainer(app: Application) {
 
     val credentialsStore = CredentialsStore(app)
     val xtreamClient = XtreamClient(httpClient)
+    val catalog = CatalogRepository(xtreamClient, credentialsStore)
 
     companion object {
         const val USER_AGENT = "Mozilla/5.0 (Linux; Android) IPTVSmart/1.0"

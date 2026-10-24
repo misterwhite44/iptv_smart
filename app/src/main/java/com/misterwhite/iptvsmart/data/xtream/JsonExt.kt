@@ -38,3 +38,10 @@ internal fun JsonElement.objects(): List<JsonObject> = when (this) {
     is JsonObject -> values.filterIsInstance<JsonObject>()
     else -> emptyList()
 }
+
+/** Premier lien d'un champ image qui peut être une liste ou un texte. */
+internal fun JsonObject.firstImage(key: String): String? = when (val value = this[key]) {
+    is JsonArray -> value.firstNotNullOfOrNull { (it as? JsonPrimitive)?.takeUnless { p -> p is JsonNull }?.content?.takeIf { c -> c.isNotBlank() } }
+    is JsonPrimitive -> str(key)
+    else -> null
+}
