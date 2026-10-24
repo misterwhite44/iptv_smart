@@ -24,8 +24,8 @@ class IptvMediaItemConverter : MediaItemConverter {
         val info = base.media ?: return base
         val mimeType = mediaItem.localConfiguration?.mimeType
         val isLive = mediaItem.mediaId.startsWith(LIVE_PREFIX)
-        val url = info.contentUrl ?: mediaItem.localConfiguration?.uri?.toString()
-        val builder = MediaInfo.Builder(info.contentId ?: url ?: mediaItem.mediaId)
+        val url = info.contentUrl ?: mediaItem.localConfiguration?.uri?.toString() ?: info.contentId ?: return base
+        val builder = MediaInfo.Builder(info.contentId ?: url)
             .setContentUrl(url)
             .setContentType(mimeType ?: info.contentType ?: MimeTypes.VIDEO_MP4)
             .setStreamType(if (isLive) MediaInfo.STREAM_TYPE_LIVE else MediaInfo.STREAM_TYPE_BUFFERED)
