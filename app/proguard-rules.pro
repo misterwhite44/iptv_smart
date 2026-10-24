@@ -10,3 +10,9 @@
 
 # Classe chargée par son nom depuis le manifeste par le framework Cast.
 -keep class com.misterwhite.iptvsmart.cast.CastOptionsProvider { *; }
+
+# Credential Manager (« Continuer avec Google ») charge son implémentation par réflexion.
+-if class androidx.credentials.CredentialManager
+-keep class androidx.credentials.playservices.** {
+  *;
+}

@@ -18,6 +18,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -47,6 +48,8 @@ import com.misterwhite.iptvsmart.ui.detail.MovieDetailScreen
 import com.misterwhite.iptvsmart.ui.detail.MovieDetailViewModel
 import com.misterwhite.iptvsmart.ui.detail.SeriesDetailScreen
 import com.misterwhite.iptvsmart.ui.detail.SeriesDetailViewModel
+import com.misterwhite.iptvsmart.ui.account.AccountScreen
+import com.misterwhite.iptvsmart.ui.account.AccountViewModel
 import com.misterwhite.iptvsmart.ui.login.LoginScreen
 import com.misterwhite.iptvsmart.ui.login.LoginViewModel
 import com.misterwhite.iptvsmart.ui.main.MainActions
@@ -163,6 +166,7 @@ private fun CrashDialog() {
 }
 
 private object Routes {
+    const val ACCOUNT = "account"
     const val LOGIN = "login"
     const val MAIN = "main"
     const val MOVIE = "movie/{id}"
@@ -178,9 +182,22 @@ private fun AppNavigation(container: AppContainer) {
     val context = LocalContext.current
     val playback = remember { Playback(context, container) }
     val library = container.library
-    val start = remember { if (container.credentialsStore.load() != null) Routes.MAIN else Routes.LOGIN }
+    val account = container.account
+    // Après le compte Zynora : l'écran du fournisseur, ou l'accueil s'il est déjà enregistré.
+    val afterAccount = { if (container.credentialsStore.load() != null) Routes.MAIN else Routes.LOGIN }
+    val start = remember { if (account.needsSignIn) Routes.ACCOUNT else afterAccount() }
 
     NavHost(navController = navController, startDestination = start) {
+        composable(Routes.ACCOUNT) {
+            val vm: AccountViewModel = viewModel(
+                factory = viewModelFactory { initializer { AccountViewModel(account) } }
+            )
+            val user by account.user.collectAsStateWithLifecycle()
+            LaunchedEffect(user) {
+                if (user != null && !account.needsSignIn) navController.logoutTo(afterAccount())
+            }
+            AccountScreen(vm)
+        }
         composable(Routes.LOGIN) {
             val vm: LoginViewModel = viewModel(
                 factory = viewModelFactory {
@@ -200,7 +217,14 @@ private fun AppNavigation(container: AppContainer) {
             val profileVm: ProfileViewModel = viewModel(
                 factory = viewModelFactory {
                     initializer {
-                        ProfileViewModel(container.xtreamClient, container.credentialsStore, container.catalog, library)
+                        ProfileViewModel(
+                            container.xtreamClient,
+                            container.credentialsStore,
+                            container.catalog,
+                            library,
+                            account,
+                            container.favoritesSync,
+                        )
                     }
                 }
             )
@@ -222,7 +246,7 @@ private fun AppNavigation(container: AppContainer) {
                         }
                     },
                 ),
-                onLoggedOut = { navController.logoutTo(Routes.LOGIN) },
+                onLoggedOut = { navController.logoutTo(if (account.needsSignIn) Routes.ACCOUNT else Routes.LOGIN) },
             )
         }
         composable(Routes.MOVIE) { entry ->

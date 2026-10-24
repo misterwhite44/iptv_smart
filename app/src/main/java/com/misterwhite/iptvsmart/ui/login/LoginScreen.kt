@@ -186,7 +186,7 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
 }
 
 @Composable
-private fun LoginField(
+internal fun LoginField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,

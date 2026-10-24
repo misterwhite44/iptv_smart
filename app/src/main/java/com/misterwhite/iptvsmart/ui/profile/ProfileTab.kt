@@ -73,6 +73,10 @@ fun ProfileTab(
 ) {
     val account by viewModel.account.collectAsStateWithLifecycle()
     var confirmLogout by remember { mutableStateOf(false) }
+    var confirmSignOut by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    val accountBusy by viewModel.accountBusy.collectAsStateWithLifecycle()
+    val accountError by viewModel.accountError.collectAsStateWithLifecycle()
     var confirmClear by remember { mutableStateOf(false) }
     val watched = library.history.filter { it.kind != MediaKind.LIVE }
     val myList = library.favorites.filter { it.kind != MediaKind.LIVE }
@@ -172,7 +176,23 @@ fun ProfileTab(
 
         item(key = "logout") {
             Section(null) {
-                ActionRow(Icons.AutoMirrored.Filled.Logout, "Se déconnecter", { confirmLogout = true }, IptvColors.Error)
+                ActionRow(Icons.AutoMirrored.Filled.Logout, "Changer de fournisseur", { confirmLogout = true })
+            }
+        }
+
+        viewModel.accountEmail?.let { email ->
+            item(key = "zynoraAccount") {
+                Section("Mon compte Zynora") {
+                    InfoRow("Compte", email)
+                    Spacer(Modifier.height(4.dp))
+                    ActionRow(Icons.AutoMirrored.Filled.Logout, "Se déconnecter", { confirmSignOut = true }, IptvColors.Error)
+                    if (accountBusy) {
+                        CircularProgressIndicator(color = IptvColors.Accent, modifier = Modifier.size(28.dp).padding(4.dp))
+                    } else {
+                        ActionRow(Icons.Filled.DeleteOutline, "Supprimer mon compte", { confirmDelete = true }, IptvColors.Error)
+                    }
+                    accountError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
             }
         }
 
@@ -189,15 +209,40 @@ fun ProfileTab(
 
     if (confirmLogout) {
         ConfirmDialog(
-            title = "Se déconnecter ?",
-            text = "Ton historique et ta liste seront effacés de ce téléphone.",
-            confirm = "Se déconnecter",
+            title = "Changer de fournisseur ?",
+            text = "Tes identifiants et ton historique seront effacés de ce téléphone.",
+            confirm = "Continuer",
             onConfirm = {
                 confirmLogout = false
-                viewModel.logout()
+                viewModel.changeProvider()
                 onLoggedOut()
             },
             onDismiss = { confirmLogout = false },
+        )
+    }
+    if (confirmSignOut) {
+        ConfirmDialog(
+            title = "Se déconnecter ?",
+            text = "Tout sera effacé de ce téléphone. Tes favoris restent sur ton compte.",
+            confirm = "Se déconnecter",
+            onConfirm = {
+                confirmSignOut = false
+                viewModel.signOutAccount()
+                onLoggedOut()
+            },
+            onDismiss = { confirmSignOut = false },
+        )
+    }
+    if (confirmDelete) {
+        ConfirmDialog(
+            title = "Supprimer ton compte ?",
+            text = "Ton compte Zynora et toutes ses données seront supprimés définitivement.",
+            confirm = "Supprimer",
+            onConfirm = {
+                confirmDelete = false
+                viewModel.deleteAccount(onDeleted = onLoggedOut)
+            },
+            onDismiss = { confirmDelete = false },
         )
     }
     if (confirmClear) {
