@@ -1,7 +1,10 @@
 # Zynora
 
 Application Android IPTV pour comptes **Xtream Codes** : chaînes en direct, films, séries,
-historique de lecture et cast vers Chromecast. Interface sombre inspirée de Disney+.
+historique de lecture et cast vers Chromecast. Interface sombre et moderne.
+
+Zynora est un lecteur : il ne fournit aucune chaîne ni aucun contenu. Chaque utilisateur
+se connecte au service auquel il a légalement accès.
 
 ## Installer l'APK sur le téléphone
 
@@ -13,7 +16,7 @@ historique de lecture et cast vers Chromecast. Interface sombre inspirée de Dis
 
 ## Fonctions
 
-- **Accueil façon Disney+** : carrousel à la une, « Reprendre la lecture », « Ma liste »,
+- **Accueil** avec : carrousel à la une, « Reprendre la lecture », « Ma liste »,
   chaînes récentes, nouveautés et rangées par catégorie.
 - **Direct, Films, Séries** : filtres par catégorie et par favoris, grille d'affiches.
 - **Fiches** films et séries : résumé, casting, saisons et épisodes, ajout à « Ma liste ».

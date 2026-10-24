@@ -3,10 +3,7 @@ package com.misterwhite.iptvsmart.ui.main
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterwhite.iptvsmart.data.CatalogRepository
-import com.misterwhite.iptvsmart.data.FavoriteEntry
 import com.misterwhite.iptvsmart.data.LibraryRepository
-import com.misterwhite.iptvsmart.data.MediaKind
-import com.misterwhite.iptvsmart.data.PreferredChannels
 import com.misterwhite.iptvsmart.data.xtream.MovieDetails
 import com.misterwhite.iptvsmart.data.xtream.XtreamException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,18 +40,6 @@ class MainViewModel(
         }
     }
 
-    private fun seedPreferredChannels(content: CatalogRepository.Content) {
-        val now = System.currentTimeMillis()
-        val channels = PreferredChannels.find(content.live).take(MAX_SEEDED)
-        library.seedFavoritesOnce(
-            "seeded_preferred_live_v1",
-            channels.mapIndexed { i, ch ->
-                FavoriteEntry(LibraryRepository.liveKey(ch.id), MediaKind.LIVE, ch.id, ch.name, ch.logo, now - i)
-            },
-        )
-    }
-
-
     private val _state = MutableStateFlow<CatalogState>(
         catalog.cachedContent()?.let { CatalogState.Ready(it) } ?: CatalogState.Loading
     )
@@ -68,16 +53,12 @@ class MainViewModel(
         if (_state.value !is CatalogState.Ready) _state.value = CatalogState.Loading
         viewModelScope.launch {
             _state.value = try {
-                CatalogState.Ready(catalog.content(forceRefresh = force).also { seedPreferredChannels(it) })
+                CatalogState.Ready(catalog.content(forceRefresh = force))
             } catch (e: XtreamException) {
                 CatalogState.Error(e.message ?: "Erreur inconnue")
             } catch (e: Exception) {
                 CatalogState.Error("Erreur inattendue : ${e.message}")
             }
         }
-    }
-
-    private companion object {
-        const val MAX_SEEDED = 40
     }
 }

@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.misterwhite.iptvsmart.data.PreferredChannels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -117,13 +116,14 @@ fun MainScreen(
                     },
                 )
                 Tab.LIVE -> {
-                    // Canal+ FR et Eurosport FR en tête de liste.
-                    val live = remember(s.content) {
-                        val preferred = PreferredChannels.find(s.content.live)
-                        val ids = preferred.mapTo(HashSet()) { it.id }
-                        s.content.live.copy(items = preferred + s.content.live.items.filter { it.id !in ids })
+                    // Les chaînes favorites en tête de liste, dans l'ordre des favoris.
+                    val favoriteIds = libraryState.favoriteIds(MediaKind.LIVE)
+                    val live = remember(s.content, favoriteIds) {
+                        val byId = s.content.live.items.associateBy { it.id }
+                        val first = favorites.filter { it.kind == MediaKind.LIVE }.mapNotNull { byId[it.contentId] }
+                        s.content.live.copy(items = first + s.content.live.items.filter { it.id !in favoriteIds })
                     }
-                    LiveTab(live, libraryState.favoriteIds(MediaKind.LIVE), actions)
+                    LiveTab(live, favoriteIds, actions)
                 }
                 Tab.MOVIES -> MoviesTab(s.content.movies, libraryState.favoriteIds(MediaKind.MOVIE), actions)
                 Tab.SERIES -> SeriesTab(s.content.series, libraryState.favoriteIds(MediaKind.SERIES), actions)
@@ -142,7 +142,7 @@ fun MainScreen(
 
     BoxWithConstraints(Modifier.fillMaxSize().background(IptvColors.Background)) {
         if (maxWidth >= 600.dp) {
-            // Écran large (paysage, tablette) : menu d'icônes à gauche comme Disney+.
+            // Écran large (paysage, tablette) : menu d'icônes à gauche.
             Row(Modifier.fillMaxSize()) {
                 SideRail(tab, profileViewModel.username, onSelect = { tabIndex = it.ordinal })
                 Box(Modifier.weight(1f).fillMaxSize()) { body() }
@@ -196,7 +196,7 @@ private fun SideRail(tab: Tab, username: String, onSelect: (Tab) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // Avatar du profil en haut, comme sur Disney+.
+        // Avatar du profil en haut, comme sur les plateformes de streaming.
         Box(
             Modifier
                 .size(36.dp)

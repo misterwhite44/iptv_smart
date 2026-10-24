@@ -71,7 +71,7 @@ import com.misterwhite.iptvsmart.ui.detail.formatRating
 import com.misterwhite.iptvsmart.ui.theme.IptvColors
 import kotlinx.coroutines.delay
 
-/** Les onglets en pilule en haut de l'accueil, comme « For You / Disney+ / Hulu ». */
+/** Les onglets en pilule en haut de l'accueil. */
 private enum class HomeSection(val label: String) {
     FOR_YOU("Pour toi"),
     MOVIES("Films"),

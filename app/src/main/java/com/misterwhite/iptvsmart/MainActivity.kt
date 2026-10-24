@@ -89,11 +89,40 @@ class MainActivity : FragmentActivity() {
         setContent {
             IptvTheme {
                 AppNavigation(container)
+                DisclaimerDialog()
                 CrashDialog()
             }
         }
     }
 }
+
+/** Rappelle au premier lancement que Zynora n'est qu'un lecteur (exigé pour le Play Store). */
+@Composable
+private fun DisclaimerDialog() {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("app", android.content.Context.MODE_PRIVATE) }
+    var show by remember { mutableStateOf(!prefs.getBoolean(KEY_DISCLAIMER_ACCEPTED, false)) }
+    if (!show) return
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text("Bienvenue sur Zynora") },
+        text = {
+            Text(
+                "Zynora est un lecteur : il ne fournit aucune chaîne, aucun film ni aucune série. " +
+                    "Tu te connectes avec ton propre service, et tu dois l'utiliser uniquement " +
+                    "s'il te donne légalement accès à ces contenus."
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                prefs.edit().putBoolean(KEY_DISCLAIMER_ACCEPTED, true).apply()
+                show = false
+            }) { Text("J'ai compris") }
+        },
+    )
+}
+
+private const val KEY_DISCLAIMER_ACCEPTED = "disclaimer_accepted_v1"
 
 /** Montre la cause du dernier plantage, avec un bouton pour la copier. */
 @Composable

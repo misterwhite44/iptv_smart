@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.misterwhite.iptvsmart.ui.components.RemoteImage
 import com.misterwhite.iptvsmart.ui.theme.IptvColors
 
-/** Grande image en fond avec le titre par-dessus, comme une fiche Disney+. */
+/** Grande image en fond avec le titre par-dessus, façon fiche de plateforme de streaming. */
 @Composable
 fun DetailHeader(
     title: String,
