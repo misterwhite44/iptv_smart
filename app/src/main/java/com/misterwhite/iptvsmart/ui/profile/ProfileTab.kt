@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,6 +55,7 @@ import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.data.MediaKind
 import com.misterwhite.iptvsmart.data.WatchEntry
 import com.misterwhite.iptvsmart.data.account.Legal
+import com.misterwhite.iptvsmart.data.billing.PremiumPlan
 import com.misterwhite.iptvsmart.data.billing.PremiumSource
 import com.misterwhite.iptvsmart.data.xtream.AccountInfo
 import com.misterwhite.iptvsmart.ui.components.ContentRow
@@ -83,6 +85,7 @@ fun ProfileTab(
     val uriHandler = LocalUriHandler.current
     val premiumSource = LocalPremium.current?.source?.collectAsStateWithLifecycle()?.value
     var showPremium by remember { mutableStateOf(false) }
+    val activePurchase = LocalPremium.current?.billing?.activePurchase?.collectAsStateWithLifecycle()?.value
     var confirmSignOut by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val accountBusy by viewModel.accountBusy.collectAsStateWithLifecycle()
@@ -200,6 +203,27 @@ fun ProfileTab(
                         PremiumSource.NONE, null -> "Gratuit"
                     },
                 )
+                if (premiumSource == PremiumSource.PLAY) {
+                    activePurchase?.let { purchase ->
+                        InfoRow("Formule", if (purchase.plan == PremiumPlan.LIFETIME) "À vie" else "Mensuelle")
+                        if (purchase.plan == PremiumPlan.MONTHLY) {
+                            InfoRow(
+                                "Renouvellement",
+                                if (purchase.autoRenewing) "Automatique chaque mois" else "Résilié : actif jusqu'à la fin du mois payé",
+                            )
+                        }
+                        InfoRow("Depuis le", DateFormat.getDateInstance(DateFormat.LONG).format(Date(purchase.purchaseTime)))
+                        if (purchase.plan == PremiumPlan.MONTHLY) {
+                            Spacer(Modifier.height(4.dp))
+                            ActionRow(Icons.Filled.Settings, "Gérer mon abonnement", {
+                                uriHandler.openUri(
+                                    "https://play.google.com/store/account/subscriptions" +
+                                        "?sku=${PremiumPlan.MONTHLY.productId}&package=${BuildConfig.APPLICATION_ID}"
+                                )
+                            })
+                        }
+                    }
+                }
                 if (premiumSource == PremiumSource.NONE) {
                     Spacer(Modifier.height(4.dp))
                     ActionRow(Icons.Filled.WorkspacePremium, "Passer à Premium", { showPremium = true }, IptvColors.AccentBright)
