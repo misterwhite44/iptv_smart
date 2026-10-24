@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Icon
@@ -29,6 +30,8 @@ import com.misterwhite.iptvsmart.data.LibraryRepository
 import com.misterwhite.iptvsmart.data.MediaKind
 import com.misterwhite.iptvsmart.data.WatchEntry
 import com.misterwhite.iptvsmart.ui.components.ErrorBox
+import com.misterwhite.iptvsmart.ui.profile.ProfileTab
+import com.misterwhite.iptvsmart.ui.profile.ProfileViewModel
 import com.misterwhite.iptvsmart.ui.components.LoadingBox
 import com.misterwhite.iptvsmart.ui.theme.IptvColors
 
@@ -37,7 +40,6 @@ class MainActions(
     val openMovie: (String) -> Unit,
     val openSeries: (String) -> Unit,
     val playChannel: (String) -> Unit,
-    val openAccount: () -> Unit,
     /** Reprend une lecture depuis « Reprendre la lecture ». */
     val resume: (WatchEntry) -> Unit,
 )
@@ -57,10 +59,17 @@ private enum class Tab(val label: String, val icon: ImageVector) {
     MOVIES("Films", Icons.Filled.Movie),
     SERIES("Séries", Icons.Filled.Tv),
     SEARCH("Recherche", Icons.Filled.Search),
+    PROFILE("Profil", Icons.Filled.Person),
 }
 
 @Composable
-fun MainScreen(viewModel: MainViewModel, library: LibraryRepository, actions: MainActions) {
+fun MainScreen(
+    viewModel: MainViewModel,
+    profileViewModel: ProfileViewModel,
+    library: LibraryRepository,
+    actions: MainActions,
+    onLoggedOut: () -> Unit,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val history by library.history.collectAsStateWithLifecycle()
     val favorites by library.favorites.collectAsStateWithLifecycle()
@@ -77,7 +86,8 @@ fun MainScreen(viewModel: MainViewModel, library: LibraryRepository, actions: Ma
                         selected = index == tabIndex,
                         onClick = { tabIndex = index },
                         icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) },
+                        label = { Text(item.label, maxLines = 1) },
+                        alwaysShowLabel = false,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = IptvColors.TextPrimary,
                             selectedTextColor = IptvColors.TextPrimary,
@@ -105,6 +115,14 @@ fun MainScreen(viewModel: MainViewModel, library: LibraryRepository, actions: Ma
                     Tab.MOVIES -> MoviesTab(s.content.movies, libraryState.favoriteIds(MediaKind.MOVIE), actions)
                     Tab.SERIES -> SeriesTab(s.content.series, libraryState.favoriteIds(MediaKind.SERIES), actions)
                     Tab.SEARCH -> SearchTab(s.content, actions)
+                    Tab.PROFILE -> ProfileTab(
+                        profileViewModel,
+                        s.content,
+                        libraryState,
+                        actions,
+                        onRefreshCatalog = { viewModel.load(force = true) },
+                        onLoggedOut = onLoggedOut,
+                    )
                 }
             }
         }

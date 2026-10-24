@@ -82,6 +82,12 @@ class LibraryRepository(context: Context) {
         return !exists
     }
 
+    @Synchronized
+    fun clearHistory() {
+        _history.value = emptyList()
+        prefs.edit().remove(KEY_HISTORY).apply()
+    }
+
     fun clear() {
         _history.value = emptyList()
         _favorites.value = emptyList()

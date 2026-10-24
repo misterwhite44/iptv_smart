@@ -110,7 +110,7 @@ fun HomeTab(
             Box {
                 if (featured.isNotEmpty()) HeroCarousel(featured)
                 else Spacer(Modifier.statusBarsPadding().height(64.dp))
-                TopBar(actions.openAccount, Modifier.align(Alignment.TopStart))
+                TopBar(Modifier.align(Alignment.TopStart))
             }
         }
         item(key = "continue") {
@@ -169,7 +169,7 @@ fun HomeTab(
 }
 
 @Composable
-private fun TopBar(openAccount: () -> Unit, modifier: Modifier = Modifier) {
+private fun TopBar(modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -180,12 +180,7 @@ private fun TopBar(openAccount: () -> Unit, modifier: Modifier = Modifier) {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text("Zynora", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            CastButton(Modifier.size(48.dp))
-            IconButton(onClick = openAccount) {
-                Icon(Icons.Filled.AccountCircle, contentDescription = "Mon compte", modifier = Modifier.size(30.dp))
-            }
-        }
+        CastButton(Modifier.size(48.dp))
     }
 }
 

@@ -39,8 +39,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.misterwhite.iptvsmart.ui.account.AccountScreen
-import com.misterwhite.iptvsmart.ui.account.AccountViewModel
+import com.misterwhite.iptvsmart.ui.profile.ProfileViewModel
 import com.misterwhite.iptvsmart.ui.detail.MovieDetailScreen
 import com.misterwhite.iptvsmart.ui.detail.MovieDetailViewModel
 import com.misterwhite.iptvsmart.ui.detail.SeriesDetailScreen
@@ -111,7 +110,6 @@ private fun CrashDialog() {
 private object Routes {
     const val LOGIN = "login"
     const val MAIN = "main"
-    const val ACCOUNT = "account"
     const val MOVIE = "movie/{id}"
     const val SERIES = "series/{id}"
 
@@ -144,14 +142,21 @@ private fun AppNavigation(container: AppContainer) {
             val vm: MainViewModel = viewModel(
                 factory = viewModelFactory { initializer { MainViewModel(container.catalog) } }
             )
+            val profileVm: ProfileViewModel = viewModel(
+                factory = viewModelFactory {
+                    initializer {
+                        ProfileViewModel(container.xtreamClient, container.credentialsStore, container.catalog, library)
+                    }
+                }
+            )
             MainScreen(
                 vm,
+                profileVm,
                 library,
                 MainActions(
                     openMovie = { navController.navigate(Routes.movie(it)) },
                     openSeries = { navController.navigate(Routes.series(it)) },
                     playChannel = playback::playChannel,
-                    openAccount = { navController.navigate(Routes.ACCOUNT) },
                     resume = { entry ->
                         when (entry.kind) {
                             MediaKind.MOVIE -> playback.resumeMovie(entry)
@@ -161,6 +166,7 @@ private fun AppNavigation(container: AppContainer) {
                         }
                     },
                 ),
+                onLoggedOut = { navController.logoutTo(Routes.LOGIN) },
             )
         }
         composable(Routes.MOVIE) { entry ->
@@ -206,20 +212,6 @@ private fun AppNavigation(container: AppContainer) {
                         FavoriteEntry(key, MediaKind.SERIES, d.series.id, d.series.name, d.series.cover, System.currentTimeMillis())
                     )
                 },
-            )
-        }
-        composable(Routes.ACCOUNT) {
-            val vm: AccountViewModel = viewModel(
-                factory = viewModelFactory {
-                    initializer {
-                        AccountViewModel(container.xtreamClient, container.credentialsStore, container.catalog, library)
-                    }
-                }
-            )
-            AccountScreen(
-                vm,
-                onBack = { navController.popBackStack() },
-                onLoggedOut = { navController.logoutTo(Routes.LOGIN) },
             )
         }
     }

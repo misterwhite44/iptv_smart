@@ -33,20 +33,79 @@ import com.misterwhite.iptvsmart.ui.components.EmptyBox
 import com.misterwhite.iptvsmart.ui.components.PosterCard
 import com.misterwhite.iptvsmart.ui.theme.IptvColors
 import java.text.Normalizer
+import androidx.compose.runtime.LaunchedEffect
+import com.misterwhite.iptvsmart.data.xtream.LiveChannel
+import com.misterwhite.iptvsmart.data.xtream.Movie
+import com.misterwhite.iptvsmart.data.xtream.Series
+import com.misterwhite.iptvsmart.ui.components.LoadingBox
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+
+private val DIACRITICS = Regex("\\p{Mn}+")
 
 private fun String.normalized(): String =
-    Normalizer.normalize(lowercase(), Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "")
+    Normalizer.normalize(lowercase(), Normalizer.Form.NFD).replace(DIACRITICS, "")
+
+private data class SearchResults(
+    val movies: List<Movie>,
+    val series: List<Series>,
+    val channels: List<LiveChannel>,
+) {
+    val isEmpty get() = movies.isEmpty() && series.isEmpty() && channels.isEmpty()
+}
+
+/**
+ * Noms déjà mis en minuscules et sans accents, calculés une seule fois :
+ * les catalogues comptent souvent des dizaines de milliers de titres.
+ */
+private class SearchIndex(private val content: CatalogRepository.Content) {
+    private val movieNames by lazy { content.movies.items.map { it.name.normalized() } }
+    private val seriesNames by lazy { content.series.items.map { it.name.normalized() } }
+    private val channelNames by lazy { content.live.items.map { it.name.normalized() } }
+
+    fun search(query: String): SearchResults = SearchResults(
+        movies = matches(content.movies.items, movieNames, query),
+        series = matches(content.series.items, seriesNames, query),
+        channels = matches(content.live.items, channelNames, query),
+    )
+
+    private fun <T> matches(items: List<T>, names: List<String>, query: String): List<T> {
+        val found = ArrayList<T>()
+        for (i in names.indices) {
+            if (names[i].contains(query)) {
+                found.add(items[i])
+                if (found.size >= MAX_RESULTS) break
+            }
+        }
+        return found
+    }
+
+    private companion object {
+        const val MAX_RESULTS = 60
+    }
+}
 
 @Composable
 fun SearchTab(content: CatalogRepository.Content, actions: MainActions) {
     var query by rememberSaveable { mutableStateOf("") }
-    val q = query.trim().normalized()
-    val results = remember(content, q) {
-        if (q.length < 2) null else Triple(
-            content.movies.items.filter { it.name.normalized().contains(q) }.take(60),
-            content.series.items.filter { it.name.normalized().contains(q) }.take(60),
-            content.live.items.filter { it.name.normalized().contains(q) }.take(60),
-        )
+    val index = remember(content) { SearchIndex(content) }
+    var results by remember { mutableStateOf<SearchResults?>(null) }
+    var searching by remember { mutableStateOf(false) }
+
+    // La recherche tourne en arrière-plan, un court instant après la dernière
+    // lettre tapée, pour que le clavier reste fluide.
+    LaunchedEffect(index, query) {
+        val q = query.trim()
+        if (q.isEmpty()) {
+            results = null
+            searching = false
+            return@LaunchedEffect
+        }
+        searching = true
+        delay(250)
+        results = withContext(Dispatchers.Default) { index.search(q.normalized()) }
+        searching = false
     }
 
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -68,26 +127,27 @@ fun SearchTab(content: CatalogRepository.Content, actions: MainActions) {
                 .fillMaxWidth()
                 .padding(16.dp),
         )
+        val current = results
         when {
-            results == null -> EmptyBox("Tape au moins deux lettres pour chercher dans ton catalogue.")
-            results.first.isEmpty() && results.second.isEmpty() && results.third.isEmpty() ->
-                EmptyBox("Aucun résultat pour « ${query.trim()} ».")
+            query.isBlank() -> EmptyBox("Cherche un film, une série ou une chaîne.")
+            current == null -> LoadingBox()
+            current.isEmpty && !searching -> EmptyBox("Aucun résultat pour « ${query.trim()} ».")
             else -> LazyColumn(
                 contentPadding = PaddingValues(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 item {
-                    ContentRow("Films", results.first, key = { it.id }) { movie ->
+                    ContentRow("Films", current.movies, key = { it.id }) { movie ->
                         PosterCard(movie.name, movie.poster, onClick = { actions.openMovie(movie.id) })
                     }
                 }
                 item {
-                    ContentRow("Séries", results.second, key = { it.id }) { series ->
+                    ContentRow("Séries", current.series, key = { it.id }) { series ->
                         PosterCard(series.name, series.cover, onClick = { actions.openSeries(series.id) })
                     }
                 }
                 item {
-                    ContentRow("Chaînes", results.third, key = { it.id }) { channel ->
+                    ContentRow("Chaînes", current.channels, key = { it.id }) { channel ->
                         ChannelCard(channel.name, channel.logo, onClick = { actions.playChannel(channel.id) })
                     }
                 }
