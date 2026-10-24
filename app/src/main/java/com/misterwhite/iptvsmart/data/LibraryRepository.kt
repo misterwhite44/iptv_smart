@@ -82,6 +82,22 @@ class LibraryRepository(context: Context) {
         return !exists
     }
 
+    /**
+     * Ajoute une seule fois des favoris par défaut. Si l'utilisateur en retire
+     * ensuite, ils ne reviennent pas.
+     */
+    @Synchronized
+    fun seedFavoritesOnce(flag: String, entries: List<FavoriteEntry>) {
+        if (entries.isEmpty() || prefs.getBoolean(flag, false)) return
+        val existing = _favorites.value.mapTo(HashSet()) { it.key }
+        val updated = _favorites.value + entries.filter { it.key !in existing }
+        _favorites.value = updated
+        prefs.edit()
+            .putString(KEY_FAVORITES, JSONArray(updated.map { it.toJson() }).toString())
+            .putBoolean(flag, true)
+            .apply()
+    }
+
     @Synchronized
     fun clearHistory() {
         _history.value = emptyList()

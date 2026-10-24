@@ -140,7 +140,7 @@ private fun AppNavigation(container: AppContainer) {
         }
         composable(Routes.MAIN) {
             val vm: MainViewModel = viewModel(
-                factory = viewModelFactory { initializer { MainViewModel(container.catalog) } }
+                factory = viewModelFactory { initializer { MainViewModel(container.catalog, library) } }
             )
             val profileVm: ProfileViewModel = viewModel(
                 factory = viewModelFactory {
@@ -157,6 +157,7 @@ private fun AppNavigation(container: AppContainer) {
                     openMovie = { navController.navigate(Routes.movie(it)) },
                     openSeries = { navController.navigate(Routes.series(it)) },
                     playChannel = playback::playChannel,
+                    playMovie = playback::playMovie,
                     resume = { entry ->
                         when (entry.kind) {
                             MediaKind.MOVIE -> playback.resumeMovie(entry)

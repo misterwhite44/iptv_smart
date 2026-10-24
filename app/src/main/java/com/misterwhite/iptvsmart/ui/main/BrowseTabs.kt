@@ -36,6 +36,7 @@ fun LiveTab(catalog: Catalog<LiveChannel>, favoriteIds: Set<String>, actions: Ma
     BrowseLayout(
         title = "Direct",
         catalog = catalog,
+        startOnFavorites = true,
         favoriteIds = favoriteIds,
         idOf = { it.id },
         categoryOf = { it.categoryId },
@@ -84,13 +85,16 @@ fun SeriesTab(catalog: Catalog<Series>, favoriteIds: Set<String>, actions: MainA
 private fun <T> BrowseLayout(
     title: String,
     catalog: Catalog<T>,
+    startOnFavorites: Boolean = false,
     favoriteIds: Set<String>,
     idOf: (T) -> String,
     categoryOf: (T) -> String?,
     minCellWidth: Int,
     grid: androidx.compose.foundation.lazy.grid.LazyGridScope.(List<T>) -> Unit,
 ) {
-    var selected by rememberSaveable(title) { mutableStateOf<String?>(null) }
+    var selected by rememberSaveable(title) {
+        mutableStateOf(if (startOnFavorites && favoriteIds.isNotEmpty()) FAVORITES else null)
+    }
     // On n'affiche que les catégories qui contiennent quelque chose.
     val categories: List<Category> = remember(catalog) {
         val used = catalog.items.mapNotNullTo(HashSet()) { categoryOf(it) }

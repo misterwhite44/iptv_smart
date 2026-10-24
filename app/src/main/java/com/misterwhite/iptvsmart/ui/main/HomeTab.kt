@@ -1,8 +1,16 @@
 package com.misterwhite.iptvsmart.ui.main
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,14 +21,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -29,32 +41,56 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.misterwhite.iptvsmart.cast.CastButton
 import com.misterwhite.iptvsmart.data.CatalogRepository
+import com.misterwhite.iptvsmart.data.LibraryRepository
+import com.misterwhite.iptvsmart.data.MediaKind
+import com.misterwhite.iptvsmart.data.xtream.Category
+import com.misterwhite.iptvsmart.data.xtream.MovieDetails
 import com.misterwhite.iptvsmart.ui.components.ChannelCard
 import com.misterwhite.iptvsmart.ui.components.ContentRow
 import com.misterwhite.iptvsmart.ui.components.PosterCard
 import com.misterwhite.iptvsmart.ui.components.RemoteImage
 import com.misterwhite.iptvsmart.ui.components.WideCard
-import com.misterwhite.iptvsmart.data.MediaKind
+import com.misterwhite.iptvsmart.ui.detail.formatRating
 import com.misterwhite.iptvsmart.ui.theme.IptvColors
 import kotlinx.coroutines.delay
 
-/** Élément mis en avant dans le carrousel du haut. */
+/** Les onglets en pilule en haut de l'accueil, comme « For You / Disney+ / Hulu ». */
+private enum class HomeSection(val label: String) {
+    FOR_YOU("Pour toi"),
+    MOVIES("Films"),
+    SERIES("Séries"),
+    LIVE("Direct"),
+}
+
+/** Élément mis en avant dans la grande affiche du haut. */
 private data class Featured(
     val key: String,
+    val badge: String,
     val title: String,
-    val subtitle: String?,
+    val meta: String?,
+    val rating: String?,
+    val description: String?,
     val image: String?,
-    val open: () -> Unit,
+    val favoriteKey: String,
+    val play: () -> Unit,
+    val info: () -> Unit,
 )
 
 @Composable
@@ -62,153 +98,284 @@ fun HomeTab(
     content: CatalogRepository.Content,
     library: LibraryState,
     actions: MainActions,
+    movieDetails: Map<String, MovieDetails>,
+    loadMovieDetails: (List<String>) -> Unit,
+    toggleFavorite: (key: String, kind: MediaKind, id: String, title: String, image: String?) -> Unit,
 ) {
-    // Un seul élément par série : le dernier épisode regardé.
-    val continueWatching = remember(library.history) {
-        library.history
-            .filter { it.isResumable }
-            .distinctBy { it.seriesId ?: it.key }
-            .take(20)
-    }
-    val recentChannels = remember(library.history) {
-        library.history.filter { it.kind == MediaKind.LIVE }.take(20)
-    }
-    val recentMovies = remember(content) {
-        content.movies.items.sortedByDescending { it.addedAt }.take(30)
-    }
-    val recentSeries = remember(content) {
-        content.series.items.sortedByDescending { it.updatedAt }.take(30)
-    }
-    val featured = remember(content) {
-        val series = recentSeries.filter { !it.backdrop.isNullOrBlank() || !it.cover.isNullOrBlank() }.take(4)
-            .map { Featured("s" + it.id, it.name, listOfNotNull("Série", it.genre, it.year).joinToString(" • "), it.backdrop ?: it.cover) { actions.openSeries(it.id) } }
-        val movies = recentMovies.filter { !it.poster.isNullOrBlank() }.take(4)
-            .map { Featured("m" + it.id, it.name, "Film", it.poster) { actions.openMovie(it.id) } }
-        (series.zip(movies).flatMap { listOf(it.first, it.second) } +
-            series.drop(movies.size) + movies.drop(series.size)).take(8)
-    }
-    // Quelques catégories de films et séries, avec leurs éléments.
-    val movieRows = remember(content) {
-        val byCategory = content.movies.items.groupBy { it.categoryId }
-        content.movies.categories.mapNotNull { cat ->
-            byCategory[cat.id]?.takeIf { it.isNotEmpty() }?.let { cat to it.take(30) }
-        }.take(6)
-    }
-    val seriesRows = remember(content) {
-        val byCategory = content.series.items.groupBy { it.categoryId }
-        content.series.categories.mapNotNull { cat ->
-            byCategory[cat.id]?.takeIf { it.isNotEmpty() }?.let { cat to it.take(30) }
-        }.take(4)
-    }
+    var section by rememberSaveable { mutableStateOf(HomeSection.FOR_YOU) }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        item(key = "hero") {
-            Box {
-                if (featured.isNotEmpty()) HeroCarousel(featured)
-                else Spacer(Modifier.statusBarsPadding().height(64.dp))
-                TopBar(Modifier.align(Alignment.TopStart))
+    val moviesByCategory = remember(content) { content.movies.items.groupBy { it.categoryId } }
+    val seriesByCategory = remember(content) { content.series.items.groupBy { it.categoryId } }
+    val liveByCategory = remember(content) { content.live.items.groupBy { it.categoryId } }
+    val recentMovies = remember(content) { content.movies.items.sortedByDescending { it.addedAt }.take(30) }
+    val recentSeries = remember(content) { content.series.items.sortedByDescending { it.updatedAt }.take(30) }
+    val featuredMovies = remember(recentMovies) { recentMovies.filter { !it.poster.isNullOrBlank() }.take(5) }
+    val featuredSeries = remember(recentSeries) {
+        recentSeries.filter { !it.backdrop.isNullOrBlank() || !it.cover.isNullOrBlank() }.take(5)
+    }
+    LaunchedEffect(featuredMovies) { loadMovieDetails(featuredMovies.map { it.id }) }
+
+    val movieCards = featuredMovies.map { m ->
+        val d = movieDetails[m.id]
+        Featured(
+            key = "m" + m.id,
+            badge = "Nouveau film",
+            title = m.name,
+            meta = listOfNotNull(d?.releaseDate?.take(4), d?.duration?.let(::shortDuration), d?.genre).joinToString(" • ").ifBlank { null },
+            rating = formatRating(m.rating),
+            description = d?.plot,
+            image = d?.backdrop ?: m.poster,
+            favoriteKey = LibraryRepository.movieKey(m.id),
+            play = { if (d != null) actions.playMovie(d) else actions.openMovie(m.id) },
+            info = { actions.openMovie(m.id) },
+        )
+    }
+    val seriesCards = featuredSeries.map { s ->
+        Featured(
+            key = "s" + s.id,
+            badge = "Nouvelle série",
+            title = s.name,
+            meta = listOfNotNull(s.year, s.genre).joinToString(" • ").ifBlank { null },
+            rating = formatRating(s.rating),
+            description = s.plot,
+            image = s.backdrop ?: s.cover,
+            favoriteKey = LibraryRepository.seriesKey(s.id),
+            play = { actions.openSeries(s.id) },
+            info = { actions.openSeries(s.id) },
+        )
+    }
+    fun featuredFor(section: HomeSection) = when (section) {
+        HomeSection.FOR_YOU -> (movieCards.zip(seriesCards).flatMap { listOf(it.first, it.second) } +
+            movieCards.drop(seriesCards.size) + seriesCards.drop(movieCards.size)).take(8)
+        HomeSection.MOVIES -> movieCards
+        HomeSection.SERIES -> seriesCards
+        HomeSection.LIVE -> emptyList()
+    }
+    val favoriteKeys = remember(library.favorites) { library.favorites.mapTo(HashSet()) { it.key } }
+
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val wide = maxWidth >= 600.dp
+        val heroHeight = if (wide) maxHeight * 0.82f else 560.dp
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            item(key = "hero") {
+                Box {
+                    AnimatedContent(
+                        targetState = section,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        label = "hero",
+                    ) { shown ->
+                        val cards = featuredFor(shown)
+                        if (cards.isNotEmpty()) {
+                            Hero(cards, heroHeight, wide, favoriteKeys) { f ->
+                                val kind = if (f.key.startsWith("s")) MediaKind.SERIES else MediaKind.MOVIE
+                                toggleFavorite(f.favoriteKey, kind, f.key.drop(1), f.title, f.image)
+                            }
+                        } else {
+                            Spacer(Modifier.fillMaxWidth().statusBarsPadding().height(72.dp))
+                        }
+                    }
+                    TopBar(section, onSection = { section = it }, Modifier.align(Alignment.TopStart))
+                }
+            }
+            when (section) {
+                HomeSection.FOR_YOU -> forYouRows(content, moviesByCategory, library, actions, recentMovies, recentSeries)
+                HomeSection.MOVIES -> categoryRows(content.movies.categories, moviesByCategory, 12, key = { it.id }) { movie ->
+                    PosterCard(movie.name, movie.poster, onClick = { actions.openMovie(movie.id) })
+                }
+                HomeSection.SERIES -> categoryRows(content.series.categories, seriesByCategory, 12, key = { it.id }) { s ->
+                    PosterCard(s.name, s.cover, onClick = { actions.openSeries(s.id) })
+                }
+                HomeSection.LIVE -> {
+                    val favorites = library.favorites.filter { it.kind == MediaKind.LIVE }
+                    item(key = "liveFav") {
+                        ContentRow("Mes chaînes", favorites, key = { it.key }) { fav ->
+                            ChannelCard(fav.title, fav.image, onClick = { actions.playChannel(fav.contentId) })
+                        }
+                    }
+                    categoryRows(content.live.categories, liveByCategory, 12, key = { it.id }) { ch ->
+                        ChannelCard(ch.name, ch.logo, onClick = { actions.playChannel(ch.id) })
+                    }
+                }
             }
         }
-        item(key = "continue") {
-            ContentRow("Reprendre la lecture", continueWatching, key = { it.key }) { entry ->
-                WideCard(
-                    title = entry.title,
-                    subtitle = entry.subtitle,
-                    imageUrl = entry.image,
-                    progress = entry.progress,
-                    onClick = { actions.resume(entry) },
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.forYouRows(
+    content: CatalogRepository.Content,
+    moviesByCategory: Map<String?, List<com.misterwhite.iptvsmart.data.xtream.Movie>>,
+    library: LibraryState,
+    actions: MainActions,
+    recentMovies: List<com.misterwhite.iptvsmart.data.xtream.Movie>,
+    recentSeries: List<com.misterwhite.iptvsmart.data.xtream.Series>,
+) {
+    // Un seul élément par série : le dernier épisode regardé.
+    val continueWatching = library.history.filter { it.isResumable }.distinctBy { it.seriesId ?: it.key }.take(20)
+    item(key = "continue") {
+        ContentRow("Reprendre la lecture", continueWatching, key = { it.key }) { entry ->
+            WideCard(entry.title, entry.subtitle, entry.image, onClick = { actions.resume(entry) }, progress = entry.progress)
+        }
+    }
+    item(key = "myChannels") {
+        ContentRow("Mes chaînes", library.favorites.filter { it.kind == MediaKind.LIVE }, key = { it.key }) { fav ->
+            ChannelCard(fav.title, fav.image, onClick = { actions.playChannel(fav.contentId) })
+        }
+    }
+    item(key = "myList") {
+        ContentRow("Ma liste", library.favorites.filter { it.kind != MediaKind.LIVE }, key = { it.key }) { fav ->
+            PosterCard(fav.title, fav.image, onClick = {
+                if (fav.kind == MediaKind.SERIES) actions.openSeries(fav.contentId) else actions.openMovie(fav.contentId)
+            })
+        }
+    }
+    item(key = "recommended") {
+        // Séries avec une image large en cartes 16:9, comme « Recommended For You ».
+        val wideSeries = recentSeries.filter { !it.backdrop.isNullOrBlank() }
+        if (wideSeries.size >= 4) {
+            ContentRow("Recommandé pour toi", wideSeries, key = { it.id }) { s ->
+                WideCard(s.name, s.genre, s.backdrop, onClick = { actions.openSeries(s.id) }, progress = null)
+            }
+        } else {
+            ContentRow("Recommandé pour toi", recentSeries, key = { it.id }) { s ->
+                PosterCard(s.name, s.cover, onClick = { actions.openSeries(s.id) })
+            }
+        }
+    }
+    item(key = "recentMovies") {
+        ContentRow("Nouveaux films", recentMovies, key = { it.id }) { movie ->
+            PosterCard(movie.name, movie.poster, onClick = { actions.openMovie(movie.id) })
+        }
+    }
+    item(key = "recentSeries") {
+        ContentRow("Séries à la une", recentSeries, key = { it.id }) { s ->
+            PosterCard(s.name, s.cover, onClick = { actions.openSeries(s.id) })
+        }
+    }
+    val recentChannels = library.history.filter { it.kind == MediaKind.LIVE }.take(20)
+    item(key = "recentChannels") {
+        ContentRow("Chaînes récentes", recentChannels, key = { it.key }) { entry ->
+            ChannelCard(entry.title, entry.image, onClick = { actions.playChannel(entry.contentId) })
+        }
+    }
+    categoryRows(content.movies.categories, moviesByCategory, 4, "fm", key = { it.id }) { movie ->
+        PosterCard(movie.name, movie.poster, onClick = { actions.openMovie(movie.id) })
+    }
+}
+
+private fun <T : Any> androidx.compose.foundation.lazy.LazyListScope.categoryRows(
+    categories: List<Category>,
+    byCategory: Map<String?, List<T>>,
+    max: Int,
+    prefix: String = "c",
+    key: (T) -> Any,
+    card: @Composable (T) -> Unit,
+) {
+    categories.asSequence()
+        .mapNotNull { cat -> byCategory[cat.id]?.takeIf { it.isNotEmpty() }?.let { cat to it.take(30) } }
+        .take(max)
+        .forEach { (cat, list) ->
+            item(key = prefix + cat.id) {
+                ContentRow(cat.name, list, key = key) { card(it) }
+            }
+        }
+}
+
+@Composable
+private fun TopBar(section: HomeSection, onSection: (HomeSection) -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.65f), Color.Transparent)))
+            .statusBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "ZYNORA",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 3.sp,
+                color = IptvColors.TextPrimary,
+                modifier = Modifier.padding(start = 4.dp).weight(1f),
+            )
+            CastButton(Modifier.size(48.dp))
+        }
+        Spacer(Modifier.height(4.dp))
+        // Pilule semi-transparente avec les sections.
+        Row(
+            Modifier
+                .align(Alignment.CenterHorizontally)
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color.White.copy(alpha = 0.12f))
+                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            HomeSection.entries.forEach { item ->
+                val selected = item == section
+                Text(
+                    item.label,
+                    color = if (selected) IptvColors.TextPrimary else IptvColors.TextSecondary,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (selected) Color.White.copy(alpha = 0.18f) else Color.Transparent)
+                        .clickable { onSection(item) }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
                 )
             }
         }
-        item(key = "favorites") {
-            ContentRow("Ma liste", library.favorites.filter { it.kind != MediaKind.LIVE }, key = { it.key }) { fav ->
-                PosterCard(fav.title, fav.image, onClick = {
-                    if (fav.kind == MediaKind.SERIES) actions.openSeries(fav.contentId) else actions.openMovie(fav.contentId)
-                })
-            }
-        }
-        item(key = "recentChannels") {
-            ContentRow("Chaînes récentes", recentChannels, key = { it.key }) { entry ->
-                ChannelCard(entry.title, entry.image, onClick = { actions.playChannel(entry.contentId) })
-            }
-        }
-        item(key = "recentMovies") {
-            ContentRow("Films récemment ajoutés", recentMovies, key = { it.id }) { movie ->
-                PosterCard(movie.name, movie.poster, onClick = { actions.openMovie(movie.id) })
-            }
-        }
-        item(key = "recentSeries") {
-            ContentRow("Séries à la une", recentSeries, key = { it.id }) { series ->
-                PosterCard(series.name, series.cover, onClick = { actions.openSeries(series.id) })
-            }
-        }
-        item(key = "live") {
-            ContentRow("En direct", content.live.items.take(20), key = { it.id }) { channel ->
-                ChannelCard(channel.name, channel.logo, onClick = { actions.playChannel(channel.id) })
-            }
-        }
-        movieRows.forEach { (category, movies) ->
-            item(key = "mc" + category.id) {
-                ContentRow(category.name, movies, key = { it.id }) { movie ->
-                    PosterCard(movie.name, movie.poster, onClick = { actions.openMovie(movie.id) })
-                }
-            }
-        }
-        seriesRows.forEach { (category, series) ->
-            item(key = "sc" + category.id) {
-                ContentRow(category.name, series, key = { it.id }) { s ->
-                    PosterCard(s.name, s.cover, onClick = { actions.openSeries(s.id) })
-                }
-            }
-        }
     }
 }
 
 @Composable
-private fun TopBar(modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent)))
-            .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text("Zynora", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-        CastButton(Modifier.size(48.dp))
-    }
-}
-
-@Composable
-private fun HeroCarousel(items: List<Featured>) {
+private fun Hero(
+    items: List<Featured>,
+    height: Dp,
+    wide: Boolean,
+    favoriteKeys: Set<String>,
+    onToggleFavorite: (Featured) -> Unit,
+) {
     val pagerState = rememberPagerState(pageCount = { items.size })
     LaunchedEffect(pagerState, items.size) {
         while (items.size > 1) {
-            delay(6_000)
+            delay(7_000)
             pagerState.animateScrollToPage((pagerState.currentPage + 1) % items.size)
         }
     }
-    Column {
+    Box {
         HorizontalPager(state = pagerState, key = { items[it].key }) { page ->
             val item = items[page]
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(440.dp),
+                    .height(height),
             ) {
                 RemoteImage(item.image, item.title, Modifier.fillMaxSize())
+                // Assombrit la gauche et le bas pour que le texte reste lisible.
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.horizontalGradient(
+                                0f to IptvColors.Background.copy(alpha = if (wide) 0.95f else 0.75f),
+                                (if (wide) 0.55f else 0.8f) to Color.Transparent,
+                            )
+                        ),
+                )
                 Box(
                     Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
                                 0f to Color.Transparent,
-                                0.45f to Color.Transparent,
+                                0.5f to Color.Transparent,
                                 1f to IptvColors.Background,
                             )
                         ),
@@ -216,29 +383,78 @@ private fun HeroCarousel(items: List<Featured>) {
                 Column(
                     Modifier
                         .align(Alignment.BottomStart)
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                        .widthIn(max = if (wide) 420.dp else 600.dp)
+                        .padding(start = 20.dp, end = 20.dp, bottom = 40.dp),
                 ) {
                     Text(
-                        item.title,
-                        style = MaterialTheme.typography.headlineLarge,
+                        item.badge,
+                        color = Color.Black,
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier
+                            .background(Color.White, RoundedCornerShape(3.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        item.title.uppercase(),
+                        fontSize = if (wide) 36.sp else 30.sp,
+                        lineHeight = if (wide) 40.sp else 34.sp,
+                        fontWeight = FontWeight.Light,
+                        letterSpacing = 1.sp,
+                        color = IptvColors.TextPrimary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    if (item.subtitle != null) {
-                        Text(item.subtitle, color = IptvColors.TextSecondary)
+                    Spacer(Modifier.height(10.dp))
+                    Text("Disponible maintenant", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (item.rating != null) {
+                            Text(
+                                item.rating,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier
+                                    .border(BorderStroke(1.dp, IptvColors.TextPrimary), RoundedCornerShape(3.dp))
+                                    .padding(horizontal = 4.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        if (item.meta != null) {
+                            Text(item.meta, style = MaterialTheme.typography.bodyMedium, color = IptvColors.TextSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
-                    Spacer(Modifier.height(12.dp))
-                    Button(
-                        onClick = item.open,
-                        shape = RoundedCornerShape(6.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = IptvColors.TextPrimary,
-                            contentColor = IptvColors.Background,
-                        ),
-                    ) {
-                        Icon(Icons.Filled.Info, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.size(8.dp))
-                        Text("DÉCOUVRIR", fontWeight = FontWeight.Bold)
+                    if (!item.description.isNullOrBlank()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            item.description,
+                            style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Button(
+                            onClick = item.play,
+                            shape = RoundedCornerShape(4.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.White.copy(alpha = 0.18f),
+                                contentColor = IptvColors.TextPrimary,
+                            ),
+                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
+                        ) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("LECTURE", fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        RoundIcon(if (item.favoriteKey in favoriteKeys) Icons.Filled.Check else Icons.Filled.Add, "Ma liste") {
+                            onToggleFavorite(item)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        RoundIcon(Icons.Filled.Info, "Plus d'infos", item.info)
                     }
                 }
             }
@@ -246,17 +462,18 @@ private fun HeroCarousel(items: List<Featured>) {
         if (items.size > 1) {
             Row(
                 Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp),
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 14.dp),
                 horizontalArrangement = Arrangement.Center,
             ) {
                 repeat(items.size) { index ->
+                    val selected = index == pagerState.currentPage
                     Box(
                         Modifier
-                            .padding(3.dp)
-                            .size(if (index == pagerState.currentPage) 8.dp else 6.dp)
+                            .padding(horizontal = 4.dp)
+                            .size(if (selected) 7.dp else 6.dp)
                             .background(
-                                if (index == pagerState.currentPage) IptvColors.TextPrimary else IptvColors.TextSecondary.copy(alpha = 0.5f),
+                                if (selected) IptvColors.TextPrimary else IptvColors.TextSecondary.copy(alpha = 0.5f),
                                 CircleShape,
                             ),
                     )
@@ -264,4 +481,28 @@ private fun HeroCarousel(items: List<Featured>) {
             }
         }
     }
+}
+
+@Composable
+private fun RoundIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(42.dp)
+            .border(1.5.dp, Color.White.copy(alpha = 0.8f), CircleShape)
+            .background(Color.Black.copy(alpha = 0.3f), CircleShape),
+    ) {
+        Icon(icon, contentDescription = label, tint = Color.White, modifier = Modifier.size(20.dp))
+    }
+}
+
+/** « 01:58:00 » ou « 118 min » devient « 1 h 58 ». */
+private fun shortDuration(raw: String): String? {
+    val parts = raw.split(":").mapNotNull { it.trim().toIntOrNull() }
+    val minutes = when {
+        parts.size >= 2 -> parts[0] * 60 + parts[1]
+        else -> Regex("\\d+").find(raw)?.value?.toIntOrNull()
+    } ?: return null
+    if (minutes <= 0) return null
+    return if (minutes >= 60) "${minutes / 60} h ${"%02d".format(minutes % 60)}" else "$minutes min"
 }
