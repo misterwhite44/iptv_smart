@@ -56,7 +56,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.misterwhite.iptvsmart.cast.CastButton
+import com.misterwhite.iptvsmart.ui.premium.PremiumCastButton
 import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.data.LibraryRepository
 import com.misterwhite.iptvsmart.data.MediaKind
@@ -303,7 +303,7 @@ private fun TopBar(section: HomeSection, onSection: (HomeSection) -> Unit, modif
                 color = IptvColors.TextPrimary,
                 modifier = Modifier.padding(start = 4.dp).weight(1f),
             )
-            CastButton(Modifier.size(48.dp))
+            PremiumCastButton(Modifier.size(48.dp))
         }
         Spacer(Modifier.height(4.dp))
         // Pilule semi-transparente avec les sections.

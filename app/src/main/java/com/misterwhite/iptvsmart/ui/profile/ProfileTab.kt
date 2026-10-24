@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -53,6 +54,7 @@ import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.data.MediaKind
 import com.misterwhite.iptvsmart.data.WatchEntry
 import com.misterwhite.iptvsmart.data.account.Legal
+import com.misterwhite.iptvsmart.data.billing.PremiumSource
 import com.misterwhite.iptvsmart.data.xtream.AccountInfo
 import com.misterwhite.iptvsmart.ui.components.ContentRow
 import com.misterwhite.iptvsmart.ui.components.PosterCard
@@ -60,6 +62,8 @@ import com.misterwhite.iptvsmart.ui.components.ProgressBar
 import com.misterwhite.iptvsmart.ui.components.RemoteImage
 import com.misterwhite.iptvsmart.ui.main.LibraryState
 import com.misterwhite.iptvsmart.ui.main.MainActions
+import com.misterwhite.iptvsmart.ui.premium.LocalPremium
+import com.misterwhite.iptvsmart.ui.premium.PremiumDialog
 import com.misterwhite.iptvsmart.ui.theme.IptvColors
 import java.text.DateFormat
 import java.util.Date
@@ -77,6 +81,8 @@ fun ProfileTab(
     val account by viewModel.account.collectAsStateWithLifecycle()
     var confirmLogout by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
+    val premiumSource = LocalPremium.current?.source?.collectAsStateWithLifecycle()?.value
+    var showPremium by remember { mutableStateOf(false) }
     var confirmSignOut by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val accountBusy by viewModel.accountBusy.collectAsStateWithLifecycle()
@@ -184,6 +190,23 @@ fun ProfileTab(
             }
         }
 
+        item(key = "premium") {
+            Section("Zynora Premium") {
+                InfoRow(
+                    "Statut",
+                    when (premiumSource) {
+                        PremiumSource.VIP -> "Actif (offert)"
+                        PremiumSource.PLAY -> "Actif"
+                        PremiumSource.NONE, null -> "Gratuit"
+                    },
+                )
+                if (premiumSource == PremiumSource.NONE) {
+                    Spacer(Modifier.height(4.dp))
+                    ActionRow(Icons.Filled.WorkspacePremium, "Passer à Premium", { showPremium = true }, IptvColors.AccentBright)
+                }
+            }
+        }
+
         viewModel.accountEmail?.let { email ->
             item(key = "zynoraAccount") {
                 Section("Mon compte Zynora") {
@@ -230,6 +253,7 @@ fun ProfileTab(
             onDismiss = { confirmLogout = false },
         )
     }
+    if (showPremium) PremiumDialog(onDismiss = { showPremium = false })
     if (confirmSignOut) {
         ConfirmDialog(
             title = "Se déconnecter ?",

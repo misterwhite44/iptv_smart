@@ -7,6 +7,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -55,6 +56,7 @@ import com.misterwhite.iptvsmart.ui.login.LoginViewModel
 import com.misterwhite.iptvsmart.ui.main.MainActions
 import com.misterwhite.iptvsmart.ui.main.MainScreen
 import com.misterwhite.iptvsmart.ui.main.MainViewModel
+import com.misterwhite.iptvsmart.ui.premium.LocalPremium
 import com.misterwhite.iptvsmart.ui.theme.IptvTheme
 
 // FragmentActivity : le choix de la Chromecast s'ouvre dans une boîte de dialogue à fragments.
@@ -71,6 +73,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Un achat ou une résiliation a pu avoir lieu hors de l'appli.
+        (application as IptvApp).container.premium.billing.refresh()
         CastSupport.castContext(this)?.let {
             lastCastState = it.castState
             it.addCastStateListener(castStateListener)
@@ -90,10 +94,12 @@ class MainActivity : FragmentActivity() {
         )
         val container = (application as IptvApp).container
         setContent {
-            IptvTheme {
-                AppNavigation(container)
-                DisclaimerDialog()
-                CrashDialog()
+            CompositionLocalProvider(LocalPremium provides container.premium) {
+                IptvTheme {
+                    AppNavigation(container)
+                    DisclaimerDialog()
+                    CrashDialog()
+                }
             }
         }
     }
