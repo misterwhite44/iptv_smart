@@ -41,6 +41,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.misterwhite.iptvsmart.data.account.Legal
 import com.misterwhite.iptvsmart.ui.login.LoginField
 import com.misterwhite.iptvsmart.ui.theme.IptvColors
 
@@ -58,6 +60,7 @@ fun AccountScreen(viewModel: AccountViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     var showPassword by rememberSaveable { mutableStateOf(false) }
     val submit = {
         focusManager.clearFocus()
@@ -191,6 +194,15 @@ fun AccountScreen(viewModel: AccountViewModel) {
                 AccountMode.SIGN_UP, AccountMode.RESET -> TextButton(onClick = { viewModel.setMode(AccountMode.SIGN_IN) }) {
                     Text("J'ai déjà un compte : me connecter", color = IptvColors.AccentBright)
                 }
+            }
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = { uriHandler.openUri(Legal.PRIVACY_POLICY_URL) }) {
+                Text(
+                    "En continuant, tu acceptes la politique de confidentialité",
+                    color = IptvColors.TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }

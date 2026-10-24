@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Policy
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,6 +52,7 @@ import com.misterwhite.iptvsmart.BuildConfig
 import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.data.MediaKind
 import com.misterwhite.iptvsmart.data.WatchEntry
+import com.misterwhite.iptvsmart.data.account.Legal
 import com.misterwhite.iptvsmart.data.xtream.AccountInfo
 import com.misterwhite.iptvsmart.ui.components.ContentRow
 import com.misterwhite.iptvsmart.ui.components.PosterCard
@@ -73,6 +76,7 @@ fun ProfileTab(
 ) {
     val account by viewModel.account.collectAsStateWithLifecycle()
     var confirmLogout by remember { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
     var confirmSignOut by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     val accountBusy by viewModel.accountBusy.collectAsStateWithLifecycle()
@@ -193,6 +197,12 @@ fun ProfileTab(
                     }
                     accountError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
+            }
+        }
+
+        item(key = "legal") {
+            Section(null) {
+                ActionRow(Icons.Filled.Policy, "Politique de confidentialité", { uriHandler.openUri(Legal.PRIVACY_POLICY_URL) })
             }
         }
 
