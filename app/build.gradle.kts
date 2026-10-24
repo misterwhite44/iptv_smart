@@ -6,24 +6,35 @@ plugins {
 
 android {
     namespace = "com.misterwhite.iptvsmart"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.misterwhite.iptvsmart"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
         versionName = "0.1.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
     }
 
     // Clé de signature fixe pour un usage personnel : chaque nouvel APK
     // peut s'installer par-dessus le précédent sans désinstaller l'appli.
+    // Elle est publique : elle ne doit jamais servir pour le Play Store.
     signingConfigs {
         create("personal") {
             storeFile = file("signing/iptvsmart.keystore")
             storePassword = "iptvsmart"
             keyAlias = "iptvsmart"
             keyPassword = "iptvsmart"
+        }
+        // Clé d'importation Play Store, privée : fournie par les secrets GitHub, jamais commitée.
+        val uploadStore = System.getenv("UPLOAD_KEYSTORE_FILE")
+        if (uploadStore != null) {
+            create("upload") {
+                storeFile = file(uploadStore)
+                storePassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+                keyAlias = "upload"
+                keyPassword = System.getenv("UPLOAD_KEYSTORE_PASSWORD")
+            }
         }
     }
 
@@ -32,7 +43,12 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("personal")
+            // -PplayUpload=true : build pour le Play Store, signé avec la clé d'importation.
+            signingConfig = if (project.hasProperty("playUpload")) {
+                signingConfigs.getByName("upload")
+            } else {
+                signingConfigs.getByName("personal")
+            }
         }
         debug {
             signingConfig = signingConfigs.getByName("personal")

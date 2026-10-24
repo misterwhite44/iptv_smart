@@ -174,6 +174,13 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
                 color = IptvColors.TextSecondary,
                 textAlign = TextAlign.Center,
             )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Zynora ne fournit aucune chaîne ni aucun contenu. Utilise uniquement un service auquel tu as légalement accès.",
+                style = MaterialTheme.typography.bodySmall,
+                color = IptvColors.TextSecondary,
+                textAlign = TextAlign.Center,
+            )
         }
     }
 }

@@ -46,7 +46,7 @@ import com.misterwhite.iptvsmart.ui.theme.IptvColors
 
 private val CardShape = RoundedCornerShape(8.dp)
 
-/** Carte qui rétrécit légèrement quand on appuie dessus, comme sur Disney+. */
+/** Carte qui rétrécit légèrement quand on appuie dessus, comme sur les plateformes de streaming. */
 @Composable
 fun PressableCard(
     onClick: () -> Unit,
@@ -206,7 +206,7 @@ fun ProgressBar(progress: Float, modifier: Modifier = Modifier) {
     }
 }
 
-/** Une rangée horizontale avec titre, comme les rangées de l'accueil Disney+. */
+/** Une rangée horizontale avec titre, comme sur les accueils de streaming. */
 @Composable
 fun <T> ContentRow(
     title: String,
