@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "790411185714",
+    "project_id": "zynora-bb32b",
+    "storage_bucket": "zynora-bb32b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:790411185714:android:42a432b717f2bdbe2bf62b",
+        "android_client_info": {
+          "package_name": "com.misterwhite.iptvsmart"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuOufZCen_zqXArSiA_fQAfimEquiYpxw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
