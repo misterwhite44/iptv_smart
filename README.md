@@ -13,6 +13,8 @@ se connecte au service auquel il a légalement accès.
 2. Ouvre le fichier. Android demande d'autoriser l'installation depuis ton navigateur :
    accepte, puis appuie sur **Installer**.
 3. Les versions suivantes s'installent par-dessus, sans perdre ta connexion ni ton historique.
+   Exception : depuis le passage à l'identifiant `com.zynora.app`, désinstalle une fois
+   l'ancienne version (IPTV Smart / Zynora d'avant) avant d'installer la nouvelle.
 
 ## Fonctions
 
