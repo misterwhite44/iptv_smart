@@ -46,7 +46,12 @@ class ProfileViewModel(
     private val _account = MutableStateFlow<AccountState>(AccountState.Loading)
     val account: StateFlow<AccountState> = _account.asStateFlow()
 
-    init {
+    private var accountRequested = false
+
+    /** Vérifie l'abonnement à la première ouverture du Profil, pas au lancement de l'appli. */
+    fun loadAccountOnce() {
+        if (accountRequested) return
+        accountRequested = true
         refreshAccount()
     }
 

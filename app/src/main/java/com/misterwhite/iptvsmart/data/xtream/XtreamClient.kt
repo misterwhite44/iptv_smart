@@ -2,6 +2,9 @@ package com.misterwhite.iptvsmart.data.xtream
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
@@ -270,9 +273,38 @@ class XtreamClient(private val http: OkHttpClient) {
         parse: (ResponseBody) -> T,
     ): T = withContext(Dispatchers.IO) {
         val url = apiUrl(credentials, action, params)
+        // Les serveurs Xtream limitent souvent les requêtes simultanées et
+        // répondent 429 au lancement si l'appli demande tout d'un coup.
+        var attempt = 0
+        while (true) {
+            when (val result = requestSlots.withPermit { executeOnce(url, parse) }) {
+                is Attempt.Done -> return@withContext result.value
+                is Attempt.Busy -> {
+                    attempt++
+                    if (attempt > MAX_BUSY_RETRIES) {
+                        throw XtreamException("Le serveur est surchargé (erreur 429). Réessaie dans quelques secondes.")
+                    }
+                    delay(result.retryAfterMs ?: (BUSY_BASE_DELAY_MS shl (attempt - 1)))
+                }
+            }
+        }
+        @Suppress("UNREACHABLE_CODE")
+        throw IllegalStateException("unreachable")
+    }
+
+    private sealed interface Attempt<out T> {
+        class Done<T>(val value: T) : Attempt<T>
+        class Busy(val retryAfterMs: Long?) : Attempt<Nothing>
+    }
+
+    private fun <T> executeOnce(url: HttpUrl, parse: (ResponseBody) -> T): Attempt<T> {
         val call = http.newCall(Request.Builder().url(url).get().build())
-        try {
+        return try {
             call.execute().use { response ->
+                if (response.code == 429 || response.code == 503) {
+                    val seconds = response.header("Retry-After")?.trim()?.toLongOrNull()
+                    return Attempt.Busy(seconds?.coerceIn(1, 30)?.times(1000))
+                }
                 when {
                     response.code == 401 || response.code == 403 ->
                         throw XtreamException(BAD_CREDENTIALS)
@@ -281,7 +313,7 @@ class XtreamClient(private val http: OkHttpClient) {
                 }
                 val body = response.body ?: throw XtreamException(UNEXPECTED)
                 try {
-                    parse(body)
+                    Attempt.Done(parse(body))
                 } catch (e: XtreamException) {
                     throw e
                 } catch (e: MalformedJsonException) {
@@ -326,6 +358,11 @@ class XtreamClient(private val http: OkHttpClient) {
     }
 
     companion object {
+        /** Requêtes envoyées en même temps au serveur, au plus. */
+        private val requestSlots = Semaphore(2)
+        private const val MAX_BUSY_RETRIES = 4
+        private const val BUSY_BASE_DELAY_MS = 1_500L
+
         private val LIVE_FIELDS = setOf("stream_id", "name", "stream_icon", "category_id", "epg_channel_id")
         private val MOVIE_FIELDS = setOf(
             "stream_id", "name", "stream_icon", "rating", "added", "category_id", "container_extension",

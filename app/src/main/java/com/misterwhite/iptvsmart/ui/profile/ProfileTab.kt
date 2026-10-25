@@ -81,6 +81,7 @@ fun ProfileTab(
     onLoggedOut: () -> Unit,
 ) {
     val account by viewModel.account.collectAsStateWithLifecycle()
+    androidx.compose.runtime.LaunchedEffect(Unit) { viewModel.loadAccountOnce() }
     var confirmLogout by remember { mutableStateOf(false) }
     val uriHandler = LocalUriHandler.current
     val premiumSource = LocalPremium.current?.source?.collectAsStateWithLifecycle()?.value
