@@ -28,6 +28,9 @@ import kotlinx.coroutines.launch
 /** Une formule Premium telle que la Play Console la décrit (prix déjà formaté dans la devise de l'utilisateur). */
 data class PremiumOffer(val plan: PremiumPlan, val price: String, internal val details: ProductDetails)
 
+/** L'achat Premium actif sur le compte Google du téléphone. */
+data class ActivePurchase(val plan: PremiumPlan, val autoRenewing: Boolean, val purchaseTime: Long)
+
 enum class PremiumPlan(val productId: String, val productType: String) {
     MONTHLY("premium_mensuel", BillingClient.ProductType.SUBS),
     LIFETIME("premium_a_vie", BillingClient.ProductType.INAPP),
@@ -48,6 +51,9 @@ class BillingRepository(context: Context) : PurchasesUpdatedListener {
     private val _ownsPremium = MutableStateFlow<Boolean?>(null)
     /** Vrai si un abonnement ou l'achat à vie est actif sur le compte Google du téléphone ; null tant qu'on ne sait pas. */
     val ownsPremium: StateFlow<Boolean?> = _ownsPremium.asStateFlow()
+
+    private val _activePurchase = MutableStateFlow<ActivePurchase?>(null)
+    val activePurchase: StateFlow<ActivePurchase?> = _activePurchase.asStateFlow()
 
     private val _offers = MutableStateFlow<List<PremiumOffer>>(emptyList())
     val offers: StateFlow<List<PremiumOffer>> = _offers.asStateFlow()
@@ -120,18 +126,27 @@ class BillingRepository(context: Context) : PurchasesUpdatedListener {
             client.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(type).build()).purchasesList
         }
         _ownsPremium.value = owned.any { isPremium(it) }
+        // L'achat à vie prime sur un abonnement éventuel.
+        _activePurchase.value = owned.filter { isPremium(it) }.mapNotNull { it.toActive() }
+            .maxByOrNull { if (it.plan == PremiumPlan.LIFETIME) 1 else 0 }
         owned.forEach { handle(it) }
     }
 
     private suspend fun handle(purchase: Purchase) {
         if (!isPremium(purchase)) return
         _ownsPremium.value = true
+        if (_activePurchase.value?.plan != PremiumPlan.LIFETIME) _activePurchase.value = purchase.toActive()
         // Sans accusé de réception sous 3 jours, Google rembourse l'achat.
         if (!purchase.isAcknowledged) {
             client.acknowledgePurchase(
                 AcknowledgePurchaseParams.newBuilder().setPurchaseToken(purchase.purchaseToken).build()
             )
         }
+    }
+
+    private fun Purchase.toActive(): ActivePurchase? {
+        val plan = PremiumPlan.entries.firstOrNull { it.productId in products } ?: return null
+        return ActivePurchase(plan, isAutoRenewing, purchaseTime)
     }
 
     private fun isPremium(purchase: Purchase) =
