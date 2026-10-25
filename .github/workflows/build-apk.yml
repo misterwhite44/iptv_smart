@@ -17,6 +17,9 @@ jobs:
       UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Historique complet et tags, pour écrire les notes de version.
+          fetch-depth: 0
 
       - uses: actions/setup-java@v4
         with:
@@ -54,15 +57,52 @@ jobs:
           name: Zynora-aab
           path: Zynora.aab
 
-      # Sur main, publie l'APK dans la release "latest" pour le télécharger
-      # directement depuis le téléphone.
+      # Notes de version : les messages des commits depuis la version
+      # précédente (tag v0.1.N), sans les commits de fusion ni les mentions
+      # de co-auteur.
+      - name: Release notes
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          VERSION="0.1.${{ github.run_number }}"
+          PREV=$(git describe --tags --abbrev=0 --match 'v0.1.*' HEAD 2>/dev/null || true)
+          if [ "$PREV" = "v$VERSION" ]; then
+            PREV=$(git describe --tags --abbrev=0 --match 'v0.1.*' HEAD^ 2>/dev/null || true)
+          fi
+          # Sans version précédente, seulement les commits apportés par ce push.
+          RANGE="${PREV:-HEAD^}..HEAD"
+          {
+            echo "Zynora $VERSION — $(date -u +%d/%m/%Y)"
+            echo
+            git log "$RANGE" --no-merges --format='### %s%n%n%b' \
+              | grep -v -E '^(Co-Authored-By|Claude-Session):'
+            echo
+            echo "Historique complet : [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)"
+          } > release-notes.md
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          cat release-notes.md
+
+      # Une release par version (v0.1.N), pour garder l'historique.
+      - name: Publish versioned release
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: Zynora ${{ env.VERSION }}
+          body_path: release-notes.md
+          prerelease: false
+          make_latest: false
+          files: Zynora.apk
+
+      # Sur main, publie aussi l'APK dans la release "latest" pour le
+      # télécharger directement depuis le téléphone (lien qui ne change pas).
       - name: Publish latest release
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
           name: Zynora (dernière version)
-          body: "Build ${{ github.run_number }} — commit ${{ github.sha }}"
+          body_path: release-notes.md
           prerelease: false
           make_latest: true
           files: |
