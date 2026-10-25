@@ -49,6 +49,51 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:790411185714:android:644d452dfa999c392bf62b",
+        "android_client_info": {
+          "package_name": "com.zynora.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "790411185714-489ptokqstmkvsgnljrrrgukgg2q5cu5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zynora.app",
+            "certificate_hash": "426a791335255e4cd482d76b731fd00f5aa750a7"
+          }
+        },
+        {
+          "client_id": "790411185714-gema0ao0ov70r4losvojpfb0q5n0kjjq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zynora.app",
+            "certificate_hash": "f378a71e8bdc115d35d9861d31713cb1b2549908"
+          }
+        },
+        {
+          "client_id": "790411185714-l89g83mki3shlq5s4bogms7fat1sgl9b.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuOufZCen_zqXArSiA_fQAfimEquiYpxw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "790411185714-l89g83mki3shlq5s4bogms7fat1sgl9b.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"
