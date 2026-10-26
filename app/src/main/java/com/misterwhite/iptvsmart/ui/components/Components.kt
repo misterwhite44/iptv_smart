@@ -3,7 +3,8 @@ package com.misterwhite.iptvsmart.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -48,9 +49,11 @@ private val CardShape = RoundedCornerShape(8.dp)
 
 /** Carte qui rétrécit légèrement quand on appuie dessus, comme sur les plateformes de streaming. */
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 fun PressableCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    onLongClick: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -62,7 +65,12 @@ fun PressableCard(
             .clip(CardShape)
             .background(IptvColors.Surface)
             .border(1.dp, Color.White.copy(alpha = 0.08f), CardShape)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+            .combinedClickable(
+                interactionSource = interaction,
+                indication = null,
+                onLongClick = onLongClick,
+                onClick = onClick,
+            ),
     ) { content() }
 }
 
@@ -160,7 +168,7 @@ fun ChannelCard(
     }
 }
 
-/** Carte large 16:9 pour « Reprendre la lecture ». */
+/** Carte large 16:9 avec barre de progression. */
 @Composable
 fun WideCard(
     title: String,
