@@ -11,6 +11,12 @@ Chaque version a aussi sa page dans les
 liste des changements. Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
+## 0.1.41 — 26/10/2026
+- « En cours » ne montre plus que les films et les séries : les chaînes en
+  direct restent dans « Chaînes récentes ».
+- Zapper entre beaucoup de chaînes ne fait plus disparaître de l'historique
+  les films et épisodes en cours.
+
 ## 0.1.39 — 26/10/2026
 - Accueil : nouvelle rangée « En cours » juste sous l'affiche, avec les films
   et épisodes entamés (barre de progression, temps restant) et les chaînes

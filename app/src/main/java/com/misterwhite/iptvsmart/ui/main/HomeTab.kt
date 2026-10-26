@@ -54,7 +54,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -159,7 +158,10 @@ fun HomeTab(
         HomeSection.LIVE -> emptyList()
     }
     val favoriteKeys = remember(library.favorites) { library.favorites.mapTo(HashSet()) { it.key } }
-    val inProgress = remember(library.history) { inProgress(library.history, System.currentTimeMillis()) }
+    // Un seul élément par série : le dernier épisode regardé.
+    val inProgress = remember(library.history) {
+        library.history.filter { it.isResumable }.distinctBy { it.seriesId ?: it.key }.take(MAX_IN_PROGRESS)
+    }
     var forgetting by remember { mutableStateOf<WatchEntry?>(null) }
     val onForget: (WatchEntry) -> Unit = { forgetting = it }
 
@@ -202,7 +204,7 @@ fun HomeTab(
                 HomeSection.FOR_YOU -> inProgress
                 HomeSection.MOVIES -> inProgress.filter { it.kind == MediaKind.MOVIE }
                 HomeSection.SERIES -> inProgress.filter { it.kind == MediaKind.EPISODE }
-                HomeSection.LIVE -> inProgress.filter { it.kind == MediaKind.LIVE }
+                HomeSection.LIVE -> emptyList()
             }
             item(key = "inProgress") {
                 ContentRow("En cours", sectionInProgress, key = { it.key }) { entry ->
@@ -249,40 +251,18 @@ fun HomeTab(
     }
 }
 
-/**
- * Ce qu'on regarde en ce moment, le plus récent d'abord : films et épisodes
- * entamés (un seul épisode par série) et chaînes ouvertes ces dernières heures.
- */
-private fun inProgress(history: List<WatchEntry>, now: Long): List<WatchEntry> {
-    val vod = history.filter { it.isResumable }.distinctBy { it.seriesId ?: it.key }
-    val live = history.filter { it.kind == MediaKind.LIVE && now - it.updatedAt < RECENT_LIVE_MS }.take(MAX_RECENT_LIVE)
-    return (vod + live).sortedByDescending { it.updatedAt }.take(MAX_IN_PROGRESS)
-}
-
-private const val RECENT_LIVE_MS = 24 * 60 * 60 * 1000L
-private const val MAX_RECENT_LIVE = 3
 private const val MAX_IN_PROGRESS = 20
 
-/** Carte 16:9 de « En cours » : progression et temps restant, ou badge DIRECT. */
+/** Carte 16:9 de « En cours » : progression et temps restant. */
 @Composable
 private fun InProgressCard(entry: WatchEntry, onClick: () -> Unit, onLongClick: () -> Unit) {
-    val live = entry.kind == MediaKind.LIVE
     Column(Modifier.width(220.dp)) {
         PressableCard(
             onClick = onClick,
             onLongClick = onLongClick,
             modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
         ) {
-            if (live) {
-                RemoteImage(
-                    entry.image,
-                    entry.title,
-                    Modifier.fillMaxSize().padding(18.dp),
-                    contentScale = ContentScale.Fit,
-                )
-            } else {
-                RemoteImage(entry.image, entry.title, Modifier.fillMaxSize())
-            }
+            RemoteImage(entry.image, entry.title, Modifier.fillMaxSize())
             Box(
                 Modifier
                     .align(Alignment.Center)
@@ -292,28 +272,11 @@ private fun InProgressCard(entry: WatchEntry, onClick: () -> Unit, onLongClick: 
             ) {
                 Icon(Icons.Filled.PlayArrow, contentDescription = "Reprendre", tint = Color.White)
             }
-            if (live) {
-                Text(
-                    "DIRECT",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp)
-                        .background(IptvColors.Error, RoundedCornerShape(3.dp))
-                        .padding(horizontal = 5.dp, vertical = 1.dp),
-                )
-            }
             entry.progress?.let { ProgressBar(it, Modifier.align(Alignment.BottomCenter)) }
         }
         Spacer(Modifier.height(6.dp))
         Text(entry.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        val detail = when {
-            live -> entry.subtitle ?: "En direct"
-            entry.kind == MediaKind.EPISODE -> entry.subtitle
-            else -> remaining(entry) ?: entry.subtitle
-        }
+        val detail = if (entry.kind == MediaKind.EPISODE) entry.subtitle else remaining(entry) ?: entry.subtitle
         if (detail != null) {
             Text(
                 detail,
