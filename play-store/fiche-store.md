@@ -55,3 +55,7 @@ Contact : louis44.boucard@proton.me
 - Publicités : non
 - Accès à l'application : connexion requise. Donner un compte Zynora de test et les identifiants du serveur de démo, avec la phrase :
   « Zynora est un lecteur. L'utilisateur fournit son propre service IPTV ; le serveur de démo ne diffuse que des vidéos libres de droits. »
+
+## Éléments graphiques
+
+- Icône de l'application (512 × 512, PNG) : [`icone-512.png`](icone-512.png), le Z violet sur fond sombre, sans coins arrondis (Google les ajoute lui-même).

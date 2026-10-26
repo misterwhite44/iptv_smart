@@ -71,6 +71,7 @@ import com.misterwhite.iptvsmart.ui.components.PosterCard
 import com.misterwhite.iptvsmart.ui.components.PressableCard
 import com.misterwhite.iptvsmart.ui.components.ProgressBar
 import com.misterwhite.iptvsmart.ui.components.RemoteImage
+import com.misterwhite.iptvsmart.ui.components.ZynoraLogo
 import com.misterwhite.iptvsmart.ui.components.WideCard
 import com.misterwhite.iptvsmart.ui.detail.formatRating
 import com.misterwhite.iptvsmart.ui.premium.PremiumCastButton
@@ -378,13 +379,15 @@ private fun TopBar(section: HomeSection, onSection: (HomeSection) -> Unit, modif
             .padding(horizontal = 12.dp, vertical = 6.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            ZynoraLogo(30.dp, Modifier.padding(start = 4.dp))
+            Spacer(Modifier.width(8.dp))
             Text(
                 "ZYNORA",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 3.sp,
                 color = IptvColors.TextPrimary,
-                modifier = Modifier.padding(start = 4.dp).weight(1f),
+                modifier = Modifier.weight(1f),
             )
             PremiumCastButton(Modifier.size(48.dp))
         }

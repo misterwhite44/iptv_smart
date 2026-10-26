@@ -21,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterwhite.iptvsmart.data.account.Legal
+import com.misterwhite.iptvsmart.ui.components.ZynoraLogo
 import com.misterwhite.iptvsmart.ui.login.LoginField
 import com.misterwhite.iptvsmart.ui.theme.IptvColors
 
@@ -84,7 +84,8 @@ fun AccountScreen(viewModel: AccountViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = IptvColors.Accent, modifier = Modifier.size(64.dp))
+            ZynoraLogo(72.dp)
+            Spacer(Modifier.height(12.dp))
             Text("Zynora", style = MaterialTheme.typography.headlineLarge, color = IptvColors.TextPrimary)
             Spacer(Modifier.height(8.dp))
             Text(

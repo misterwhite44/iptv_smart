@@ -11,6 +11,12 @@ Chaque version a aussi sa page dans les
 liste des changements. Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
+## Prochaine version
+- Nouveau logo Zynora : le Z violet lumineux remplace l'ancienne télé, sur
+  l'icône de l'appli (toutes les formes d'icônes Android), l'écran de
+  démarrage, les écrans de connexion et en haut de l'accueil.
+- Icône 512 px pour la fiche Play Store dans `play-store/icone-512.png`.
+
 ## 0.1.41 — 26/10/2026
 - « En cours » ne montre plus que les films et les séries : les chaînes en
   direct restent dans « Chaînes récentes ».

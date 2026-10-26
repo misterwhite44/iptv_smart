@@ -21,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,6 +48,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.misterwhite.iptvsmart.ui.components.ZynoraLogo
 import com.misterwhite.iptvsmart.ui.theme.IptvColors
 
 @Composable
@@ -78,12 +78,8 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                tint = IptvColors.Accent,
-                modifier = Modifier.size(64.dp),
-            )
+            ZynoraLogo(72.dp)
+            Spacer(Modifier.height(12.dp))
             Text(
                 text = "Zynora",
                 style = MaterialTheme.typography.headlineLarge,
