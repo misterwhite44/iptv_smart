@@ -43,7 +43,7 @@ data class FavoriteEntry(
     val addedAt: Long,
 )
 
-/** Historique et favoris, gardés sur le téléphone. */
+/** Historique et favoris du téléphone, recopiés sur le compte par AccountSync. */
 class LibraryRepository(context: Context) {
 
     private val prefs = context.getSharedPreferences("library", Context.MODE_PRIVATE)
@@ -58,14 +58,36 @@ class LibraryRepository(context: Context) {
 
     @Synchronized
     fun record(entry: WatchEntry) {
-        // Les chaînes ont leur propre limite : zapper ne doit pas faire sortir
-        // de l'historique les films et épisodes en cours.
-        var liveCount = 0
-        val updated = (listOf(entry) + _history.value.filter { it.key != entry.key })
-            .filter { it.kind != MediaKind.LIVE || ++liveCount <= MAX_LIVE_HISTORY }
-            .take(MAX_HISTORY)
+        val updated = trimHistory(listOf(entry) + _history.value.filter { it.key != entry.key })
         _history.value = updated
         prefs.edit().putString(KEY_HISTORY, JSONArray(updated.map { it.toJson() }).toString()).apply()
+    }
+
+    /**
+     * Mélange l'historique venu du compte avec celui du téléphone : pour chaque
+     * contenu, la lecture la plus récente gagne (et donc sa position de reprise).
+     */
+    @Synchronized
+    fun mergeHistory(entries: List<WatchEntry>) {
+        if (entries.isEmpty()) return
+        val merged = (_history.value + entries)
+            .groupBy { it.key }
+            .values
+            .map { same -> same.maxBy { it.updatedAt } }
+            .sortedByDescending { it.updatedAt }
+        val updated = trimHistory(merged)
+        if (updated == _history.value) return
+        _history.value = updated
+        prefs.edit().putString(KEY_HISTORY, JSONArray(updated.map { it.toJson() }).toString()).apply()
+    }
+
+    // Les chaînes ont leur propre limite : zapper ne doit pas faire sortir
+    // de l'historique les films et épisodes en cours.
+    private fun trimHistory(entries: List<WatchEntry>): List<WatchEntry> {
+        var liveCount = 0
+        return entries
+            .filter { it.kind != MediaKind.LIVE || ++liveCount <= MAX_LIVE_HISTORY }
+            .take(MAX_HISTORY)
     }
 
     @Synchronized

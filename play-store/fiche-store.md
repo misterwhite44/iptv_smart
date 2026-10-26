@@ -31,8 +31,8 @@ UNE INTERFACE PENSÉE POUR LE CONFORT
 
 TON COMPTE ZYNORA
 • Crée ton compte avec ton email ou ton compte Google.
-• Tes favoris sont sauvegardés sur ton compte et te suivent après une réinstallation.
-• Les identifiants de ton fournisseur restent uniquement sur ton téléphone, chiffrés.
+• Tes favoris, ton historique et tes reprises « En cours » sont sauvegardés sur ton compte et te suivent après une réinstallation ou sur un autre appareil.
+• Ton service IPTV peut aussi être gardé sur ton compte (au choix), pour ne pas le ressaisir.
 
 ZYNORA PREMIUM
 • Cast sur ta Chromecast.

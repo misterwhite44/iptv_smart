@@ -7,6 +7,7 @@ import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
+import com.google.android.gms.tasks.Task
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.FirebaseApp
@@ -38,8 +39,9 @@ class AccountException(message: String) : Exception(message)
 
 /**
  * Comptes Zynora : email + mot de passe ou Google, via Firebase Authentication.
- * Les mots de passe sont gérés par Firebase et ne passent jamais par nos données.
- * Les identifiants Xtream, eux, restent uniquement sur le téléphone.
+ * Les mots de passe Zynora sont gérés par Firebase et ne passent jamais par nos données.
+ * Favoris, historique et (si l'utilisateur le veut) son service IPTV sont gardés
+ * dans users/{uid}/library, lisible uniquement par lui (voir firestore.rules).
  */
 class AccountRepository(private val context: Context) {
 
@@ -106,7 +108,8 @@ class AccountRepository(private val context: Context) {
     suspend fun deleteAccount() = guarded {
         val user = requireAuth().currentUser ?: return@guarded
         val userDoc = requireDb().collection(USERS).document(user.uid)
-        userDoc.collection(LIBRARY).document(FAVORITES).delete().await()
+        val library = userDoc.collection(LIBRARY)
+        listOf(FAVORITES, HISTORY, XTREAM).forEach { library.document(it).delete().await() }
         userDoc.delete().await()
         user.delete().await()
     }
@@ -120,21 +123,48 @@ class AccountRepository(private val context: Context) {
     }
 
     /** Favoris enregistrés sur le compte, ou null s'il n'y en a pas encore. */
-    suspend fun loadFavorites(uid: String): List<Map<String, Any?>>? {
-        val snapshot = requireDb().collection(USERS).document(uid)
-            .collection(LIBRARY).document(FAVORITES).get().await()
-        @Suppress("UNCHECKED_CAST")
-        return snapshot.get("items") as? List<Map<String, Any?>>
+    suspend fun loadFavorites(uid: String): List<Map<String, Any?>>? = loadItems(uid, FAVORITES)
+
+    suspend fun saveFavorites(uid: String, items: List<Map<String, Any?>>) = saveItems(uid, FAVORITES, items)
+
+    /** Historique et positions de reprise enregistrés sur le compte, ou null. */
+    suspend fun loadHistory(uid: String): List<Map<String, Any?>>? = loadItems(uid, HISTORY)
+
+    /** Sans attendre le serveur : Firestore garde l'écriture et l'envoie dès que possible. */
+    fun saveHistory(uid: String, items: List<Map<String, Any?>>): Task<Void> =
+        libraryDoc(uid, HISTORY).set(mapOf("items" to items, "updatedAt" to FieldValue.serverTimestamp()))
+
+    suspend fun deleteHistory(uid: String) {
+        libraryDoc(uid, HISTORY).delete().await()
     }
 
-    suspend fun saveFavorites(uid: String, items: List<Map<String, Any?>>) {
-        requireDb().collection(USERS).document(uid)
-            .collection(LIBRARY).document(FAVORITES)
+    /** Service IPTV (URL, identifiant, mot de passe) enregistré sur le compte, ou null. */
+    suspend fun loadXtream(uid: String): Map<String, Any?>? =
+        libraryDoc(uid, XTREAM).get().await().data
+
+    suspend fun saveXtream(uid: String, data: Map<String, Any?>) {
+        libraryDoc(uid, XTREAM).set(data + ("updatedAt" to FieldValue.serverTimestamp())).await()
+    }
+
+    suspend fun deleteXtream(uid: String) {
+        libraryDoc(uid, XTREAM).delete().await()
+    }
+
+    private fun libraryDoc(uid: String, name: String) =
+        requireDb().collection(USERS).document(uid).collection(LIBRARY).document(name)
+
+    private suspend fun loadItems(uid: String, name: String): List<Map<String, Any?>>? {
+        @Suppress("UNCHECKED_CAST")
+        return libraryDoc(uid, name).get().await().get("items") as? List<Map<String, Any?>>
+    }
+
+    private suspend fun saveItems(uid: String, name: String, items: List<Map<String, Any?>>) {
+        libraryDoc(uid, name)
             .set(mapOf("items" to items, "updatedAt" to FieldValue.serverTimestamp()))
             .await()
     }
 
-    /** Crée ou met à jour la fiche du compte : le strict nécessaire, rien sur le fournisseur IPTV. */
+    /** Crée ou met à jour la fiche du compte : le strict nécessaire. */
     private suspend fun onSignedIn(user: FirebaseUser?, provider: String) {
         user ?: return
         val doc = requireDb().collection(USERS).document(user.uid)
@@ -183,5 +213,7 @@ class AccountRepository(private val context: Context) {
         const val USERS = "users"
         const val LIBRARY = "library"
         const val FAVORITES = "favorites"
+        const val HISTORY = "history"
+        const val XTREAM = "xtream"
     }
 }
