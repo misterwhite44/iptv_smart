@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -58,6 +59,7 @@ import com.misterwhite.iptvsmart.ui.main.MainScreen
 import com.misterwhite.iptvsmart.ui.main.MainViewModel
 import com.misterwhite.iptvsmart.ui.premium.LocalPremium
 import com.misterwhite.iptvsmart.ui.theme.IptvTheme
+import kotlinx.coroutines.launch
 
 // FragmentActivity : le choix de la Chromecast s'ouvre dans une boîte de dialogue à fragments.
 class MainActivity : FragmentActivity() {
@@ -187,6 +189,7 @@ private fun AppNavigation(container: AppContainer) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val playback = remember { Playback(context, container) }
+    val scope = rememberCoroutineScope()
     val library = container.library
     val account = container.account
     // Après le compte Zynora : l'écran du fournisseur, ou l'accueil s'il est déjà enregistré.
@@ -246,11 +249,12 @@ private fun AppNavigation(container: AppContainer) {
                     resume = { entry ->
                         when (entry.kind) {
                             MediaKind.MOVIE -> playback.resumeMovie(entry)
-                            MediaKind.EPISODE -> entry.seriesId?.let { navController.navigate(Routes.series(it)) }
+                            MediaKind.EPISODE -> scope.launch { playback.resumeEpisode(entry) }
                             MediaKind.LIVE -> playback.playChannel(entry.contentId)
                             MediaKind.SERIES -> navController.navigate(Routes.series(entry.contentId))
                         }
                     },
+                    forget = { entry -> library.removeFromHistory(entry.key) },
                 ),
                 onLoggedOut = { navController.logoutTo(if (account.needsSignIn) Routes.ACCOUNT else Routes.LOGIN) },
             )

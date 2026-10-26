@@ -9,7 +9,7 @@ import org.json.JSONObject
 
 enum class MediaKind { LIVE, MOVIE, EPISODE, SERIES }
 
-/** Une lecture en cours ou passée, pour l'historique et « Reprendre la lecture ». */
+/** Une lecture en cours ou passée, pour l'historique et « En cours ». */
 data class WatchEntry(
     val key: String,
     val kind: MediaKind,

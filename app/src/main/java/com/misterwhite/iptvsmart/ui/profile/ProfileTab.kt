@@ -307,7 +307,7 @@ fun ProfileTab(
     if (confirmClear) {
         ConfirmDialog(
             title = "Effacer l'historique ?",
-            text = "« Reprendre la lecture » sera vidé. Ta liste est conservée.",
+            text = "« En cours » sera vidé. Ta liste est conservée.",
             confirm = "Effacer",
             onConfirm = {
                 confirmClear = false

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,12 +34,14 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,23 +54,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.misterwhite.iptvsmart.ui.premium.PremiumCastButton
 import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.data.LibraryRepository
 import com.misterwhite.iptvsmart.data.MediaKind
+import com.misterwhite.iptvsmart.data.WatchEntry
 import com.misterwhite.iptvsmart.data.xtream.Category
 import com.misterwhite.iptvsmart.data.xtream.MovieDetails
 import com.misterwhite.iptvsmart.ui.components.ChannelCard
 import com.misterwhite.iptvsmart.ui.components.ContentRow
 import com.misterwhite.iptvsmart.ui.components.PosterCard
+import com.misterwhite.iptvsmart.ui.components.PressableCard
+import com.misterwhite.iptvsmart.ui.components.ProgressBar
 import com.misterwhite.iptvsmart.ui.components.RemoteImage
 import com.misterwhite.iptvsmart.ui.components.WideCard
 import com.misterwhite.iptvsmart.ui.detail.formatRating
+import com.misterwhite.iptvsmart.ui.premium.PremiumCastButton
 import com.misterwhite.iptvsmart.ui.theme.IptvColors
 import kotlinx.coroutines.delay
 
@@ -152,10 +159,19 @@ fun HomeTab(
         HomeSection.LIVE -> emptyList()
     }
     val favoriteKeys = remember(library.favorites) { library.favorites.mapTo(HashSet()) { it.key } }
+    val inProgress = remember(library.history) { inProgress(library.history, System.currentTimeMillis()) }
+    var forgetting by remember { mutableStateOf<WatchEntry?>(null) }
+    val onForget: (WatchEntry) -> Unit = { forgetting = it }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = maxWidth >= 600.dp
-        val heroHeight = if (wide) maxHeight * 0.82f else 560.dp
+        // Sur téléphone, l'affiche est un peu moins haute quand il y a des
+        // lectures en cours, pour que leur rangée soit visible sans défiler.
+        val heroHeight = when {
+            wide -> maxHeight * 0.82f
+            inProgress.isNotEmpty() -> 500.dp
+            else -> 560.dp
+        }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -182,6 +198,17 @@ fun HomeTab(
                     TopBar(section, onSection = { section = it }, Modifier.align(Alignment.TopStart))
                 }
             }
+            val sectionInProgress = when (section) {
+                HomeSection.FOR_YOU -> inProgress
+                HomeSection.MOVIES -> inProgress.filter { it.kind == MediaKind.MOVIE }
+                HomeSection.SERIES -> inProgress.filter { it.kind == MediaKind.EPISODE }
+                HomeSection.LIVE -> inProgress.filter { it.kind == MediaKind.LIVE }
+            }
+            item(key = "inProgress") {
+                ContentRow("En cours", sectionInProgress, key = { it.key }) { entry ->
+                    InProgressCard(entry, onClick = { actions.resume(entry) }, onLongClick = { onForget(entry) })
+                }
+            }
             when (section) {
                 HomeSection.FOR_YOU -> forYouRows(content, moviesByCategory, library, actions, recentMovies, recentSeries)
                 HomeSection.MOVIES -> categoryRows(content.movies.categories, moviesByCategory, 12, key = { it.id }) { movie ->
@@ -204,6 +231,106 @@ fun HomeTab(
             }
         }
     }
+
+    forgetting?.let { entry ->
+        AlertDialog(
+            onDismissRequest = { forgetting = null },
+            title = { Text("Retirer de « En cours » ?") },
+            text = { Text(entry.title + (entry.subtitle?.let { "\n$it" } ?: "")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    actions.forget(entry)
+                    forgetting = null
+                }) { Text("Retirer") }
+            },
+            dismissButton = { TextButton(onClick = { forgetting = null }) { Text("Annuler") } },
+            containerColor = IptvColors.Surface,
+        )
+    }
+}
+
+/**
+ * Ce qu'on regarde en ce moment, le plus récent d'abord : films et épisodes
+ * entamés (un seul épisode par série) et chaînes ouvertes ces dernières heures.
+ */
+private fun inProgress(history: List<WatchEntry>, now: Long): List<WatchEntry> {
+    val vod = history.filter { it.isResumable }.distinctBy { it.seriesId ?: it.key }
+    val live = history.filter { it.kind == MediaKind.LIVE && now - it.updatedAt < RECENT_LIVE_MS }.take(MAX_RECENT_LIVE)
+    return (vod + live).sortedByDescending { it.updatedAt }.take(MAX_IN_PROGRESS)
+}
+
+private const val RECENT_LIVE_MS = 24 * 60 * 60 * 1000L
+private const val MAX_RECENT_LIVE = 3
+private const val MAX_IN_PROGRESS = 20
+
+/** Carte 16:9 de « En cours » : progression et temps restant, ou badge DIRECT. */
+@Composable
+private fun InProgressCard(entry: WatchEntry, onClick: () -> Unit, onLongClick: () -> Unit) {
+    val live = entry.kind == MediaKind.LIVE
+    Column(Modifier.width(220.dp)) {
+        PressableCard(
+            onClick = onClick,
+            onLongClick = onLongClick,
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+        ) {
+            if (live) {
+                RemoteImage(
+                    entry.image,
+                    entry.title,
+                    Modifier.fillMaxSize().padding(18.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            } else {
+                RemoteImage(entry.image, entry.title, Modifier.fillMaxSize())
+            }
+            Box(
+                Modifier
+                    .align(Alignment.Center)
+                    .size(40.dp)
+                    .background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = "Reprendre", tint = Color.White)
+            }
+            if (live) {
+                Text(
+                    "DIRECT",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .background(IptvColors.Error, RoundedCornerShape(3.dp))
+                        .padding(horizontal = 5.dp, vertical = 1.dp),
+                )
+            }
+            entry.progress?.let { ProgressBar(it, Modifier.align(Alignment.BottomCenter)) }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(entry.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        val detail = when {
+            live -> entry.subtitle ?: "En direct"
+            entry.kind == MediaKind.EPISODE -> entry.subtitle
+            else -> remaining(entry) ?: entry.subtitle
+        }
+        if (detail != null) {
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodyMedium,
+                color = IptvColors.TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** « Reste 1 h 12 », « Reste 8 min ». */
+private fun remaining(entry: WatchEntry): String? {
+    if (entry.durationMs <= 0) return null
+    val minutes = ((entry.durationMs - entry.positionMs).coerceAtLeast(0) / 60_000).toInt().coerceAtLeast(1)
+    return if (minutes >= 60) "Reste ${minutes / 60} h ${"%02d".format(minutes % 60)}" else "Reste $minutes min"
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.forYouRows(
@@ -214,13 +341,6 @@ private fun androidx.compose.foundation.lazy.LazyListScope.forYouRows(
     recentMovies: List<com.misterwhite.iptvsmart.data.xtream.Movie>,
     recentSeries: List<com.misterwhite.iptvsmart.data.xtream.Series>,
 ) {
-    // Un seul élément par série : le dernier épisode regardé.
-    val continueWatching = library.history.filter { it.isResumable }.distinctBy { it.seriesId ?: it.key }.take(20)
-    item(key = "continue") {
-        ContentRow("Reprendre la lecture", continueWatching, key = { it.key }) { entry ->
-            WideCard(entry.title, entry.subtitle, entry.image, onClick = { actions.resume(entry) }, progress = entry.progress)
-        }
-    }
     item(key = "myChannels") {
         ContentRow("Mes chaînes", library.favorites.filter { it.kind == MediaKind.LIVE }, key = { it.key }) { fav ->
             ChannelCard(fav.title, fav.image, onClick = { actions.playChannel(fav.contentId) })

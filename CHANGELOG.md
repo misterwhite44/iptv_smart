@@ -11,6 +11,17 @@ Chaque version a aussi sa page dans les
 liste des changements. Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
+## 0.1.39 — 26/10/2026
+- Accueil : nouvelle rangée « En cours » juste sous l'affiche, avec les films
+  et épisodes entamés (barre de progression, temps restant) et les chaînes
+  regardées dans les dernières 24 h (badge DIRECT). Elle apparaît aussi,
+  filtrée, dans les onglets Films, Séries et Direct.
+- Un épisode en cours reprend directement à la bonne minute, sans repasser
+  par la fiche de la série ; les épisodes suivants s'enchaînent.
+- Appui long sur une carte « En cours » pour la retirer.
+- La position est aussi gardée pour les films dont le serveur n'annonce pas
+  la durée.
+
 ## 0.1.35 — 25/10/2026
 - Corrige l'erreur 429 (« trop de requêtes ») au lancement : les requêtes vers
   le serveur Xtream partent deux par deux, celles refusées (429/503) sont

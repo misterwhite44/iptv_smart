@@ -116,6 +116,45 @@ class Playback(private val context: Context, private val container: AppContainer
         )
     }
 
+    /**
+     * Reprend un épisode directement, sans passer par la fiche de la série.
+     * Les épisodes suivants sont ajoutés si la fiche se charge ; sinon on lit
+     * au moins cet épisode.
+     */
+    suspend fun resumeEpisode(entry: WatchEntry) {
+        val c = credentials() ?: return
+        val details = entry.seriesId?.let { id ->
+            try {
+                container.catalog.seriesDetails(id)
+            } catch (e: Exception) {
+                null
+            }
+        }
+        val episode = details?.seasons?.values?.flatten()?.firstOrNull { it.id == entry.contentId }
+        if (details != null && episode != null) {
+            playEpisode(details, episode)
+            return
+        }
+        val extension = entry.extension ?: "mp4"
+        start(
+            listOf(
+                PlayItem(
+                    key = entry.key,
+                    kind = MediaKind.EPISODE,
+                    contentId = entry.contentId,
+                    seriesId = entry.seriesId,
+                    title = entry.title,
+                    subtitle = entry.subtitle,
+                    image = entry.image,
+                    url = c.episodeUrl(entry.contentId, extension),
+                    extension = extension,
+                    startPositionMs = entry.positionMs,
+                )
+            ),
+            0,
+        )
+    }
+
     private fun start(queue: List<PlayItem>, index: Int) {
         if (queue.isEmpty()) return
         PlayQueue.set(queue, index)

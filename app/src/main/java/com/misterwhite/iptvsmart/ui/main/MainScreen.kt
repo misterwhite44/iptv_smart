@@ -62,8 +62,10 @@ class MainActions(
     val openSeries: (String) -> Unit,
     val playChannel: (String) -> Unit,
     val playMovie: (MovieDetails) -> Unit,
-    /** Reprend une lecture depuis « Reprendre la lecture ». */
+    /** Reprend une lecture depuis « En cours » ou l'historique. */
     val resume: (WatchEntry) -> Unit,
+    /** Retire une lecture de « En cours » (appui long). */
+    val forget: (WatchEntry) -> Unit = {},
 )
 
 /** Historique et favoris, partagés par les onglets. */

@@ -425,8 +425,11 @@ class PlayerActivity : FragmentActivity() {
         val exo = activePlayer ?: return
         val item = items.getOrNull(currentItemIndex()) ?: return
         if (item.kind == MediaKind.LIVE) return
-        val duration = exo.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: return
-        record(item, exo.currentPosition, duration)
+        val duration = exo.duration.takeIf { it != C.TIME_UNSET && it > 0 }
+        // Certains films n'annoncent pas leur durée : on garde quand même la
+        // position, mais seulement une fois la lecture vraiment lancée.
+        if (duration == null && (exo.playbackState != Player.STATE_READY || exo.currentPosition <= 0)) return
+        record(item, exo.currentPosition, duration ?: 0)
     }
 
     private fun record(item: PlayItem, positionMs: Long, durationMs: Long) {
