@@ -58,7 +58,12 @@ class LibraryRepository(context: Context) {
 
     @Synchronized
     fun record(entry: WatchEntry) {
-        val updated = (listOf(entry) + _history.value.filter { it.key != entry.key }).take(MAX_HISTORY)
+        // Les chaînes ont leur propre limite : zapper ne doit pas faire sortir
+        // de l'historique les films et épisodes en cours.
+        var liveCount = 0
+        val updated = (listOf(entry) + _history.value.filter { it.key != entry.key })
+            .filter { it.kind != MediaKind.LIVE || ++liveCount <= MAX_LIVE_HISTORY }
+            .take(MAX_HISTORY)
         _history.value = updated
         prefs.edit().putString(KEY_HISTORY, JSONArray(updated.map { it.toJson() }).toString()).apply()
     }
@@ -162,6 +167,7 @@ class LibraryRepository(context: Context) {
         private const val KEY_HISTORY = "history"
         private const val KEY_FAVORITES = "favorites"
         private const val MAX_HISTORY = 200
+        private const val MAX_LIVE_HISTORY = 50
 
         fun movieKey(id: String) = "movie:$id"
         fun episodeKey(id: String) = "episode:$id"
