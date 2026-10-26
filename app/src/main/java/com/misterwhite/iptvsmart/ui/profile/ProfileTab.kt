@@ -268,7 +268,7 @@ fun ProfileTab(
     if (confirmLogout) {
         ConfirmDialog(
             title = "Changer de fournisseur ?",
-            text = "Tes identifiants et ton historique seront effacés de ce téléphone.",
+            text = "Ton service et ton historique seront effacés de ce téléphone et de ton compte. Ta liste est conservée.",
             confirm = "Continuer",
             onConfirm = {
                 confirmLogout = false
@@ -282,12 +282,11 @@ fun ProfileTab(
     if (confirmSignOut) {
         ConfirmDialog(
             title = "Se déconnecter ?",
-            text = "Tout sera effacé de ce téléphone. Tes favoris restent sur ton compte.",
+            text = "Tout sera effacé de ce téléphone. Ton service, ton historique et ta liste restent sur ton compte et reviendront à la prochaine connexion.",
             confirm = "Se déconnecter",
             onConfirm = {
                 confirmSignOut = false
-                viewModel.signOutAccount()
-                onLoggedOut()
+                viewModel.signOutAccount(onDone = onLoggedOut)
             },
             onDismiss = { confirmSignOut = false },
         )
