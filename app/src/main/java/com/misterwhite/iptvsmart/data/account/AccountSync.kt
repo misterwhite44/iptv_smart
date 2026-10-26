@@ -14,7 +14,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -71,15 +70,14 @@ class AccountSync(
                 loadHistory(uid)
                 // Le lecteur note la position toutes les 5 s : au plus une écriture par minute
                 // pendant la lecture, et flush() à la sortie du lecteur pour la position finale.
-                library.history
-                    .conflate()
-                    .collect {
-                        // Hors ligne au départ : on relit le compte avant d'écrire, sinon
-                        // l'historique du téléphone écraserait celui du compte.
-                        if (historyLoadedFor != uid) loadHistory(uid)
-                        saveHistory(uid)
-                        delay(HISTORY_SAVE_INTERVAL_MS)
-                    }
+                // StateFlow ne garde que la dernière valeur pendant le delay.
+                library.history.collect {
+                    // Hors ligne au départ : on relit le compte avant d'écrire, sinon
+                    // l'historique du téléphone écraserait celui du compte.
+                    if (historyLoadedFor != uid) loadHistory(uid)
+                    saveHistory(uid)
+                    delay(HISTORY_SAVE_INTERVAL_MS)
+                }
             }
             launch { uploadCredentialsIfMissing(uid) }
         }
