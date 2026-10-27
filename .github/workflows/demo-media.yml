@@ -1,0 +1,61 @@
+name: Médias de la démo
+
+# Vérifie les sources vidéo de la démo et prépare les affiches (images extraites
+# des films ouverts Blender, CC BY). Résultat sur la branche « demo-media ».
+on:
+  workflow_dispatch:
+  push:
+    branches: [ claude/project-thread-tih42a ]
+    paths:
+      - .github/workflows/demo-media.yml
+
+permissions:
+  contents: write
+
+jobs:
+  media:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe and extract
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg > /dev/null
+          mkdir out && cd out
+          for u in \
+            https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4 \
+            https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_480p_h264.mov \
+            https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_720p_h264.mov \
+            https://download.blender.org/durian/movies/sintel-1024-surround.mp4 \
+            https://download.blender.org/durian/movies/Sintel.2010.720p.mkv \
+            https://download.blender.org/demo/movies/ToS/tears_of_steel_720p.mov \
+            https://download.blender.org/demo/movies/ToS/ToS-4k-1920.mov \
+            https://download.blender.org/ED/ED_1024.avi \
+            https://download.blender.org/ED/ED_HD.avi \
+            https://archive.org/download/ElephantsDream/ed_1024_512kb.mp4 \
+            https://archive.org/download/ElephantsDream/ed_hd_512kb.mp4 \
+            https://archive.org/download/Sintel/sintel-2048-surround_512kb.mp4 \
+            https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4 \
+            https://archive.org/download/tears-of-steel/tears_of_steel_720p.mp4 \
+            https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8 \
+            https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8 \
+            https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8 \
+            https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8 \
+            ; do
+            r=$(curl -s -o /dev/null -L -r 0-1023 -m 20 -w '%{http_code} %{content_type} %{size_download}' "$u")
+            echo "$r $u" | tee -a urls.txt
+          done
+          for v in "bbb https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4 60" \
+                   "ed https://archive.org/download/ElephantsDream/ed_hd_512kb.mp4 200" \
+                   "sintel https://archive.org/download/Sintel/sintel-2048-surround_512kb.mp4 330" \
+                   "tos https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8 120"; do
+            set -- $v
+            ffmpeg -loglevel error -ss "$3" -i "$2" -frames:v 1 -vf scale=1280:-2 -q:v 3 "$1.jpg" && echo "frame $1 ok" | tee -a urls.txt || echo "frame $1 FAIL" | tee -a urls.txt
+          done
+
+      - name: Push result branch
+        run: |
+          cd out
+          git init -q -b demo-media
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -qm "Médias démo"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" demo-media
