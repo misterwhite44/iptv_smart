@@ -65,6 +65,11 @@ class LoginViewModel(
     /** Ouvre le catalogue de démonstration intégré, sans le garder sur le compte Zynora. */
     fun tryDemo() {
         if (!BuildConfig.DEMO || _state.value.isLoading) return
+        openDemo()
+    }
+
+    /** Ouvre la démo, jamais gardée sur le compte Zynora. */
+    private fun openDemo() {
         store.save(DemoCatalog.credentials)
         store.saveLiveFormat(DemoCatalog.account.allowedOutputFormats)
         store.setKeepOnAccount(false)
@@ -74,6 +79,10 @@ class LoginViewModel(
     fun submit() {
         val current = _state.value
         if (!current.canSubmit) return
+        if (DemoCatalog.matchesLogin(current.serverUrl, current.username, current.password)) {
+            openDemo()
+            return
+        }
         val credentials = XtreamCredentials(
             serverUrl = XtreamClient.normalizeServerUrl(current.serverUrl),
             username = current.username.trim(),

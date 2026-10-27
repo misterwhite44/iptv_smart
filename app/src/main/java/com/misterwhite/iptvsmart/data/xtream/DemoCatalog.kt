@@ -1,13 +1,12 @@
 package com.misterwhite.iptvsmart.data.xtream
 
-import com.misterwhite.iptvsmart.BuildConfig
-
 /**
- * Service de démonstration de l'APK « Zynora IPTV Démo » (build -Pdemo=true) :
- * quelques vidéos libres de droits (films ouverts de la Blender Foundation, flux
- * HLS de test publics) pour montrer Zynora sans abonnement IPTV. Inactif dans
- * l'appli normale. Aucune requête n'est envoyée à [SERVER] : XtreamClient répond
- * avec ces données.
+ * Service de démonstration : quelques vidéos libres de droits (films ouverts de la
+ * Blender Foundation, flux HLS de test publics) pour montrer Zynora sans abonnement
+ * IPTV. L'APK « Zynora IPTV Démo » (build -Pdemo=true) l'ouvre avec un bouton ;
+ * dans l'appli normale il est caché et ne s'ouvre qu'en saisissant « demo » comme
+ * serveur, identifiant et mot de passe (vérificateurs du Play Store).
+ * Aucune requête n'est envoyée à [SERVER] : XtreamClient répond avec ces données.
  */
 object DemoCatalog {
     const val SERVER = "http://demo.zynora.invalid"
@@ -16,7 +15,12 @@ object DemoCatalog {
 
     val credentials = XtreamCredentials(SERVER, USERNAME, PASSWORD)
 
-    fun isDemo(credentials: XtreamCredentials) = BuildConfig.DEMO && credentials.serverUrl == SERVER
+    fun isDemo(credentials: XtreamCredentials) = credentials.serverUrl == SERVER
+
+    /** Vrai si l'écran du fournisseur a été rempli avec les codes de la démo. */
+    fun matchesLogin(server: String, username: String, password: String) =
+        server.trim().equals(USERNAME, ignoreCase = true) &&
+            username.trim() == USERNAME && password.trim() == PASSWORD
 
     private const val GTV = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample"
     private const val BLENDER = "© Blender Foundation, sous licence Creative Commons Attribution (blender.org)."
