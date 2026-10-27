@@ -5,14 +5,20 @@ numéro du build GitHub Actions qui a produit l'APK. Les builds des pull
 requests et les builds en échec ne donnent pas de version publiée, d'où les
 numéros qui sautent.
 
-Chaque version a aussi sa page dans les
+Depuis la 0.1.37, chaque version a aussi sa page dans les
 [Releases GitHub](https://github.com/misterwhite44/iptv_smart/releases)
-(tag `v0.1.N`), créée automatiquement à chaque mise à jour de `main` avec la
-liste des changements. Le lien de téléchargement habituel ne change pas :
+(tag `v0.1.N`), créée automatiquement à chaque mise à jour de `main` avec
+l'APK et la liste des changements. Les versions plus anciennes ne sont
+décrites qu'ici.
+
+Pour une modification de l'appli, ajouter ses lignes sous un titre
+`## Prochaine version` en haut de la liste : au build de `main`, ce titre est
+remplacé tout seul par le numéro de la version et sa date.
+
+Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
-## 0.1.43 — 26/10/2026
-## Prochaine version
+## 0.1.47 — 26/10/2026
 - Ton compte Zynora garde maintenant ton historique, tes reprises « En
   cours » et ton service IPTV (adresse, identifiant, mot de passe) en plus de
   ta liste : après une déconnexion, une réinstallation ou sur un autre
@@ -22,6 +28,8 @@ https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
   minute pendant la lecture, et tout de suite quand tu quittes le lecteur.
 - « Changer de fournisseur » efface aussi l'ancien service et son historique
   du compte. Politique de confidentialité mise à jour en conséquence.
+
+## 0.1.43 — 26/10/2026
 - Nouveau logo Zynora : le Z violet lumineux remplace l'ancienne télé, sur
   l'icône de l'appli (toutes les formes d'icônes Android), l'écran de
   démarrage, les écrans de connexion et en haut de l'accueil.

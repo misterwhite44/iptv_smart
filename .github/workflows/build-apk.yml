@@ -57,24 +57,29 @@ jobs:
           name: Zynora-aab
           path: Zynora.aab
 
-      # Notes de version : les messages des commits depuis la version
+      # Notes de version : la section « ## Prochaine version » du CHANGELOG si
+      # elle existe, sinon les messages des commits depuis la version
       # précédente (tag v0.1.N), sans les commits de fusion ni les mentions
       # de co-auteur.
       - name: Release notes
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
           VERSION="0.1.${{ github.run_number }}"
-          PREV=$(git describe --tags --abbrev=0 --match 'v0.1.*' HEAD 2>/dev/null || true)
-          if [ "$PREV" = "v$VERSION" ]; then
-            PREV=$(git describe --tags --abbrev=0 --match 'v0.1.*' HEAD^ 2>/dev/null || true)
-          fi
-          # Sans version précédente, seulement les commits apportés par ce push.
-          RANGE="${PREV:-HEAD^}..HEAD"
+          NEXT=$(awk '/^## /{p=($0=="## Prochaine version")} p&&!/^## /' CHANGELOG.md)
           {
             echo "Zynora $VERSION — $(date -u +%d/%m/%Y)"
             echo
-            git log "$RANGE" --no-merges --format='### %s%n%n%b' \
-              | grep -v -E '^(Co-Authored-By|Claude-Session):'
+            if [ -n "$(echo "$NEXT" | tr -d '[:space:]')" ]; then
+              echo "$NEXT"
+            else
+              PREV=$(git describe --tags --abbrev=0 --match 'v0.1.*' HEAD 2>/dev/null || true)
+              if [ "$PREV" = "v$VERSION" ]; then
+                PREV=$(git describe --tags --abbrev=0 --match 'v0.1.*' HEAD^ 2>/dev/null || true)
+              fi
+              # Sans version précédente, seulement les commits apportés par ce push.
+              git log "${PREV:-HEAD^}..HEAD" --no-merges --format='### %s%n%n%b' \
+                | grep -v -E '^(Co-Authored-By|Claude-Session):'
+            fi
             echo
             echo "Historique complet : [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md)"
           } > release-notes.md
@@ -108,3 +113,18 @@ jobs:
           files: |
             Zynora.apk
             IPTVSmart.apk
+
+      # Remplace « ## Prochaine version » par le numéro de cette version dans
+      # le CHANGELOG. Si main a bougé entre-temps, le push est refusé sans
+      # casser le build : le build suivant, qui contient aussi ces lignes,
+      # remplacera le titre.
+      - name: Stamp CHANGELOG
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          grep -q '^## Prochaine version$' CHANGELOG.md || exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          sed -i "s|^## Prochaine version\$|## $VERSION — $(date -u +%d/%m/%Y)|" CHANGELOG.md
+          git commit -am "CHANGELOG : version $VERSION" \
+            && git push origin HEAD:refs/heads/main \
+            || echo "::warning::CHANGELOG non mis à jour"
