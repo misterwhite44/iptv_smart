@@ -53,9 +53,8 @@ Contact : louis44.boucard@proton.me
 - Catégorie : Lecteurs et éditeurs vidéo
 - Public cible : 18 ans et plus (évite les exigences « famille » et colle à la politique de confidentialité)
 - Publicités : non
-- Accès à l'application : connexion requise. Donner un compte Zynora de test (e-mail + mot de passe) et des identifiants Xtream de test qui ne diffusent que du contenu autorisé, avec la phrase :
-  « Zynora est un lecteur. L'utilisateur fournit son propre service IPTV. »
-  La version Play ne contient pas de démo : la démo est un APK à part (release `demo` sur GitHub).
+- Accès à l'application : connexion requise. Nom « Reviewer account », un compte Zynora dédié (e-mail + mot de passe), et en anglais :
+  « Zynora IPTV is a video player only: users connect their own IPTV (Xtream Codes) service, the app provides no content. 1) Sign in with the account above. 2) On the "IPTV provider" screen, enter "demo" as server URL, username and password. This opens a built-in demo catalog of royalty-free videos (Blender Foundation open movies, public HLS test streams). »
 
 ## Éléments graphiques
 

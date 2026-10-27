@@ -18,6 +18,11 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
+## Prochaine version
+- Démo cachée pour les vérificateurs du Play Store : en saisissant « demo »
+  comme serveur, identifiant et mot de passe, l'appli ouvre le catalogue de
+  démonstration. Aucun bouton visible, rien ne change pour les autres.
+
 ## 0.1.57 — 27/10/2026
 - Nouvel APK à part « Zynora IPTV Démo » (release `demo` sur GitHub) : il
   s'installe à côté de l'appli normale et ouvre un petit catalogue de vidéos
