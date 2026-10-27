@@ -18,6 +18,10 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
+## Prochaine version
+- Achats Premium : passage à la version 8 de Google Play Billing, exigée par
+  le Play Store.
+
 ## 0.1.47 — 26/10/2026
 - Ton compte Zynora garde maintenant ton historique, tes reprises « En
   cours » et ton service IPTV (adresse, identifiant, mot de passe) en plus de
