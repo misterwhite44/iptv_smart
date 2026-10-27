@@ -6,7 +6,10 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.misterwhite.iptvsmart.data.xtream.XtreamCredentials
 
-/** Garde l'URL, l'identifiant et le mot de passe chiffrés sur le téléphone. */
+/**
+ * Garde l'URL, l'identifiant et le mot de passe chiffrés sur le téléphone.
+ * AccountSync en garde aussi une copie sur le compte Zynora si l'utilisateur le veut.
+ */
 class CredentialsStore(private val context: Context) {
 
     private val prefs: SharedPreferences by lazy {
@@ -55,6 +58,18 @@ class CredentialsStore(private val context: Context) {
         prefs.edit().putString(KEY_LIVE_FORMAT, format).apply()
     }
 
+    /** Remet le format retrouvé sur le compte, sans revérifier le serveur. */
+    fun restoreLiveFormat(format: String) {
+        if (format == "m3u8" || format == "ts") prefs.edit().putString(KEY_LIVE_FORMAT, format).apply()
+    }
+
+    /** Vrai si l'utilisateur veut retrouver ce service sur son compte Zynora. */
+    fun keepOnAccount(): Boolean = prefs.getBoolean(KEY_KEEP_ON_ACCOUNT, true)
+
+    fun setKeepOnAccount(keep: Boolean) {
+        prefs.edit().putBoolean(KEY_KEEP_ON_ACCOUNT, keep).apply()
+    }
+
     fun clear() {
         prefs.edit().clear().apply()
     }
@@ -65,5 +80,6 @@ class CredentialsStore(private val context: Context) {
         const val KEY_USERNAME = "username"
         const val KEY_PASSWORD = "password"
         const val KEY_LIVE_FORMAT = "live_format"
+        const val KEY_KEEP_ON_ACCOUNT = "keep_on_account"
     }
 }

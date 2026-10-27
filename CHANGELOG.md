@@ -12,6 +12,16 @@ liste des changements. Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
 ## 0.1.43 — 26/10/2026
+## Prochaine version
+- Ton compte Zynora garde maintenant ton historique, tes reprises « En
+  cours » et ton service IPTV (adresse, identifiant, mot de passe) en plus de
+  ta liste : après une déconnexion, une réinstallation ou sur un autre
+  téléphone, tout revient dès que tu te reconnectes, sans ressaisir ton
+  service. Une case sur l'écran du fournisseur permet de ne pas garder le
+  service sur le compte. Les positions de lecture partent au plus une fois par
+  minute pendant la lecture, et tout de suite quand tu quittes le lecteur.
+- « Changer de fournisseur » efface aussi l'ancien service et son historique
+  du compte. Politique de confidentialité mise à jour en conséquence.
 - Nouveau logo Zynora : le Z violet lumineux remplace l'ancienne télé, sur
   l'icône de l'appli (toutes les formes d'icônes Android), l'écran de
   démarrage, les écrans de connexion et en haut de l'accueil.

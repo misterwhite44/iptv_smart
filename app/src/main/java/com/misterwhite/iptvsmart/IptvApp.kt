@@ -7,7 +7,7 @@ import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.data.CredentialsStore
 import com.misterwhite.iptvsmart.data.LibraryRepository
 import com.misterwhite.iptvsmart.data.account.AccountRepository
-import com.misterwhite.iptvsmart.data.account.FavoritesSync
+import com.misterwhite.iptvsmart.data.account.AccountSync
 import com.misterwhite.iptvsmart.data.billing.BillingRepository
 import com.misterwhite.iptvsmart.data.billing.PremiumRepository
 import com.misterwhite.iptvsmart.data.xtream.XtreamClient
@@ -51,7 +51,7 @@ class AppContainer(app: Application) {
     val catalog = CatalogRepository(xtreamClient, credentialsStore)
     val library = LibraryRepository(app)
     val account = AccountRepository(app)
-    val favoritesSync = FavoritesSync(account, library)
+    val accountSync = AccountSync(account, library, credentialsStore)
     val premium = PremiumRepository(app, account, BillingRepository(app))
 
     companion object {

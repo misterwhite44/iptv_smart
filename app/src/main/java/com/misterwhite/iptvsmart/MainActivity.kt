@@ -203,14 +203,25 @@ private fun AppNavigation(container: AppContainer) {
             )
             val user by account.user.collectAsStateWithLifecycle()
             LaunchedEffect(user) {
-                if (user != null && !account.needsSignIn) navController.logoutTo(afterAccount())
+                if (user != null && !account.needsSignIn) {
+                    // Le service IPTV enregistré sur le compte revient sans le ressaisir.
+                    container.accountSync.restoreCredentials()
+                    navController.logoutTo(afterAccount())
+                }
             }
             AccountScreen(vm)
         }
         composable(Routes.LOGIN) {
             val vm: LoginViewModel = viewModel(
                 factory = viewModelFactory {
-                    initializer { LoginViewModel(container.xtreamClient, container.credentialsStore) }
+                    initializer {
+                        LoginViewModel(
+                            container.xtreamClient,
+                            container.credentialsStore,
+                            container.accountSync,
+                            hasAccount = account.user.value != null,
+                        )
+                    }
                 }
             )
             LoginScreen(vm, onLoggedIn = {
@@ -232,7 +243,7 @@ private fun AppNavigation(container: AppContainer) {
                             container.catalog,
                             library,
                             account,
-                            container.favoritesSync,
+                            container.accountSync,
                         )
                     }
                 }

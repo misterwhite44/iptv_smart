@@ -165,6 +165,8 @@ class PlayerActivity : FragmentActivity() {
     override fun onStop() {
         super.onStop()
         releasePlayer()
+        // La dernière position part tout de suite sur le compte, pour reprendre ailleurs.
+        container.accountSync.flush()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

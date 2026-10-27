@@ -3,6 +3,7 @@ package com.misterwhite.iptvsmart.ui.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterwhite.iptvsmart.data.CredentialsStore
+import com.misterwhite.iptvsmart.data.account.AccountSync
 import com.misterwhite.iptvsmart.data.xtream.XtreamClient
 import com.misterwhite.iptvsmart.data.xtream.XtreamCredentials
 import com.misterwhite.iptvsmart.data.xtream.XtreamException
@@ -19,6 +20,8 @@ data class LoginUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val loggedIn: Boolean = false,
+    /** Null sans compte Zynora ; sinon, garder ce service sur le compte. */
+    val keepOnAccount: Boolean? = null,
 ) {
     val canSubmit get() = serverUrl.isNotBlank() && username.isNotBlank() && password.isNotBlank() && !isLoading
 }
@@ -26,9 +29,11 @@ data class LoginUiState(
 class LoginViewModel(
     private val client: XtreamClient,
     private val store: CredentialsStore,
+    private val accountSync: AccountSync,
+    hasAccount: Boolean,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(LoginUiState())
+    private val _state = MutableStateFlow(LoginUiState(keepOnAccount = if (hasAccount) true else null))
     val state: StateFlow<LoginUiState> = _state.asStateFlow()
 
     fun onServerUrlChange(value: String) {
@@ -52,6 +57,8 @@ class LoginViewModel(
 
     fun onPasswordChange(value: String) = _state.update { it.copy(password = value, error = null) }
 
+    fun onKeepOnAccountChange(value: Boolean) = _state.update { it.copy(keepOnAccount = value) }
+
     fun submit() {
         val current = _state.value
         if (!current.canSubmit) return
@@ -66,6 +73,7 @@ class LoginViewModel(
                 val account = client.authenticate(credentials)
                 store.save(credentials)
                 store.saveLiveFormat(account.allowedOutputFormats)
+                current.keepOnAccount?.let(accountSync::onCredentialsSaved)
                 _state.update { it.copy(isLoading = false, loggedIn = true) }
             } catch (e: XtreamException) {
                 _state.update { it.copy(isLoading = false, error = e.message) }

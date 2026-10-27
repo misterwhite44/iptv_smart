@@ -7,7 +7,7 @@ import com.misterwhite.iptvsmart.data.CredentialsStore
 import com.misterwhite.iptvsmart.data.LibraryRepository
 import com.misterwhite.iptvsmart.data.account.AccountException
 import com.misterwhite.iptvsmart.data.account.AccountRepository
-import com.misterwhite.iptvsmart.data.account.FavoritesSync
+import com.misterwhite.iptvsmart.data.account.AccountSync
 import com.misterwhite.iptvsmart.data.xtream.AccountInfo
 import com.misterwhite.iptvsmart.data.xtream.XtreamClient
 import com.misterwhite.iptvsmart.data.xtream.XtreamException
@@ -28,7 +28,7 @@ class ProfileViewModel(
     private val catalog: CatalogRepository,
     private val library: LibraryRepository,
     private val zynoraAccount: AccountRepository,
-    private val favoritesSync: FavoritesSync,
+    private val accountSync: AccountSync,
 ) : ViewModel() {
 
     /** Adresse du compte Zynora, ou null si les comptes ne sont pas configurés. */
@@ -73,18 +73,29 @@ class ProfileViewModel(
 
     fun clearHistory() = library.clearHistory()
 
-    /** Oublie le fournisseur IPTV ; les favoris enregistrés sur le compte reviennent ensuite. */
+    /**
+     * Oublie le fournisseur IPTV, ici et sur le compte, avec son historique ;
+     * les favoris enregistrés sur le compte reviennent ensuite.
+     */
     fun changeProvider() {
-        favoritesSync.stop()
+        accountSync.stop()
         clearDevice()
-        favoritesSync.restart()
+        accountSync.forgetProviderAndRestart()
     }
 
-    /** Déconnecte le compte Zynora et efface tout de ce téléphone (les favoris restent sur le compte). */
-    fun signOutAccount() {
-        favoritesSync.stop()
-        zynoraAccount.signOut()
-        clearDevice()
+    /**
+     * Déconnecte le compte Zynora et efface tout de ce téléphone. Favoris, historique
+     * et service IPTV restent sur le compte et reviennent à la prochaine connexion.
+     */
+    fun signOutAccount(onDone: () -> Unit) {
+        _accountBusy.value = true
+        viewModelScope.launch {
+            accountSync.flushAndStop()
+            zynoraAccount.signOut()
+            clearDevice()
+            _accountBusy.value = false
+            onDone()
+        }
     }
 
     fun deleteAccount(onDeleted: () -> Unit) {
@@ -92,13 +103,13 @@ class ProfileViewModel(
         _accountError.value = null
         viewModelScope.launch {
             try {
-                favoritesSync.stop()
+                accountSync.stop()
                 zynoraAccount.deleteAccount()
                 clearDevice()
                 onDeleted()
             } catch (e: AccountException) {
                 _accountError.value = e.message
-                favoritesSync.restart()
+                accountSync.restart()
             } finally {
                 _accountBusy.value = false
             }
