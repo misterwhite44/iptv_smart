@@ -15,7 +15,6 @@ import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
 import com.android.billingclient.api.QueryPurchasesParams
 import com.android.billingclient.api.acknowledgePurchase
-import com.android.billingclient.api.queryProductDetails
 import com.android.billingclient.api.queryPurchasesAsync
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +23,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
 /** Une formule Premium telle que la Play Console la décrit (prix déjà formaté dans la devise de l'utilisateur). */
 data class PremiumOffer(val plan: PremiumPlan, val price: String, internal val details: ProductDetails)
@@ -46,6 +47,7 @@ class BillingRepository(context: Context) : PurchasesUpdatedListener {
     private val client = BillingClient.newBuilder(context.applicationContext)
         .setListener(this)
         .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+        .enableAutoServiceReconnection()
         .build()
 
     private val _ownsPremium = MutableStateFlow<Boolean?>(null)
@@ -110,7 +112,7 @@ class BillingRepository(context: Context) : PurchasesUpdatedListener {
                     QueryProductDetailsParams.Product.newBuilder().setProductId(it.productId).setProductType(type).build()
                 })
                 .build()
-            client.queryProductDetails(params).productDetailsList.orEmpty()
+            queryProductDetails(params)
         }
         _offers.value = PremiumPlan.entries.mapNotNull { plan ->
             val d = details.firstOrNull { it.productId == plan.productId } ?: return@mapNotNull null
@@ -131,6 +133,13 @@ class BillingRepository(context: Context) : PurchasesUpdatedListener {
             .maxByOrNull { if (it.plan == PremiumPlan.LIFETIME) 1 else 0 }
         owned.forEach { handle(it) }
     }
+
+    private suspend fun queryProductDetails(params: QueryProductDetailsParams): List<ProductDetails> =
+        suspendCancellableCoroutine { cont ->
+            client.queryProductDetailsAsync(params) { _, result ->
+                if (cont.isActive) cont.resume(result.productDetailsList)
+            }
+        }
 
     private suspend fun handle(purchase: Purchase) {
         if (!isPremium(purchase)) return
