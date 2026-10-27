@@ -19,10 +19,10 @@ Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
 ## Prochaine version
-- Démo cachée pour les testeurs : en saisissant « demo » comme serveur,
-  identifiant et mot de passe, l'appli ouvre un petit catalogue de vidéos
-  libres de droits (films Blender, flux de test). Rien ne change pour les
-  autres utilisateurs.
+- Nouvel APK à part « Zynora IPTV Démo » (release `demo` sur GitHub) : il
+  s'installe à côté de l'appli normale et ouvre un petit catalogue de vidéos
+  libres de droits (films Blender, flux de test) pour montrer l'appli sans
+  abonnement IPTV. L'appli normale ne change pas.
 
 ## 0.1.53 — 27/10/2026
 - Achats Premium : passage à la version 8 de Google Play Billing, exigée par
