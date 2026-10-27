@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterwhite.iptvsmart.data.CredentialsStore
 import com.misterwhite.iptvsmart.data.account.AccountSync
+import com.misterwhite.iptvsmart.data.xtream.DemoCatalog
 import com.misterwhite.iptvsmart.data.xtream.XtreamClient
 import com.misterwhite.iptvsmart.data.xtream.XtreamCredentials
 import com.misterwhite.iptvsmart.data.xtream.XtreamException
@@ -58,6 +59,15 @@ class LoginViewModel(
     fun onPasswordChange(value: String) = _state.update { it.copy(password = value, error = null) }
 
     fun onKeepOnAccountChange(value: Boolean) = _state.update { it.copy(keepOnAccount = value) }
+
+    /** Ouvre le catalogue de démonstration intégré, sans le garder sur le compte Zynora. */
+    fun tryDemo() {
+        if (_state.value.isLoading) return
+        store.save(DemoCatalog.credentials)
+        store.saveLiveFormat(DemoCatalog.account.allowedOutputFormats)
+        store.setKeepOnAccount(false)
+        _state.update { it.copy(error = null, loggedIn = true) }
+    }
 
     fun submit() {
         val current = _state.value

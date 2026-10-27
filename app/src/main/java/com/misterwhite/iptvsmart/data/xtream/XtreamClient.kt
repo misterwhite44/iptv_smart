@@ -32,6 +32,7 @@ class XtreamClient(private val http: OkHttpClient) {
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     suspend fun authenticate(credentials: XtreamCredentials): AccountInfo {
+        if (DemoCatalog.isDemo(credentials)) return DemoCatalog.account
         val root = request(credentials, action = null) as? JsonObject
             ?: throw XtreamException(UNEXPECTED)
         val user = root.obj("user_info") ?: throw XtreamException(UNEXPECTED)
@@ -63,7 +64,8 @@ class XtreamClient(private val http: OkHttpClient) {
     // élément par élément, sans jamais charger toute la réponse en mémoire.
 
     suspend fun liveChannels(credentials: XtreamCredentials): List<LiveChannel> =
-        streamList(credentials, "get_live_streams", LIVE_FIELDS) { f ->
+        if (DemoCatalog.isDemo(credentials)) DemoCatalog.liveChannels
+        else streamList(credentials, "get_live_streams", LIVE_FIELDS) { f ->
             LiveChannel(
                 id = f["stream_id"] ?: return@streamList null,
                 name = f["name"] ?: "Chaîne",
@@ -74,7 +76,8 @@ class XtreamClient(private val http: OkHttpClient) {
         }
 
     suspend fun movies(credentials: XtreamCredentials): List<Movie> =
-        streamList(credentials, "get_vod_streams", MOVIE_FIELDS) { f ->
+        if (DemoCatalog.isDemo(credentials)) DemoCatalog.movies
+        else streamList(credentials, "get_vod_streams", MOVIE_FIELDS) { f ->
             Movie(
                 id = f["stream_id"] ?: return@streamList null,
                 name = f["name"] ?: "Film",
@@ -87,7 +90,8 @@ class XtreamClient(private val http: OkHttpClient) {
         }
 
     suspend fun series(credentials: XtreamCredentials): List<Series> =
-        streamList(credentials, "get_series", SERIES_FIELDS) { f ->
+        if (DemoCatalog.isDemo(credentials)) DemoCatalog.series
+        else streamList(credentials, "get_series", SERIES_FIELDS) { f ->
             Series(
                 id = f["series_id"] ?: return@streamList null,
                 name = f["name"] ?: "Série",
@@ -103,6 +107,7 @@ class XtreamClient(private val http: OkHttpClient) {
         }
 
     suspend fun movieDetails(credentials: XtreamCredentials, movie: Movie): MovieDetails {
+        if (DemoCatalog.isDemo(credentials)) return DemoCatalog.movieDetails(movie)
         val root = request(credentials, "get_vod_info", mapOf("vod_id" to movie.id)) as? JsonObject
         val info = root?.obj("info")
         val data = root?.obj("movie_data")
@@ -122,6 +127,7 @@ class XtreamClient(private val http: OkHttpClient) {
     }
 
     suspend fun seriesDetails(credentials: XtreamCredentials, series: Series): SeriesDetails {
+        if (DemoCatalog.isDemo(credentials)) return DemoCatalog.seriesDetails(series)
         val root = request(credentials, "get_series_info", mapOf("series_id" to series.id)) as? JsonObject
         val info = root?.obj("info")
         val seasons = mutableMapOf<Int, List<Episode>>()
@@ -162,6 +168,7 @@ class XtreamClient(private val http: OkHttpClient) {
     }
 
     suspend fun categories(credentials: XtreamCredentials, type: ContentType): List<Category> {
+        if (DemoCatalog.isDemo(credentials)) return DemoCatalog.categories(type)
         val action = when (type) {
             ContentType.LIVE -> "get_live_categories"
             ContentType.MOVIE -> "get_vod_categories"

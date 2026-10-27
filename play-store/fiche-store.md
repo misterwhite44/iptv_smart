@@ -53,8 +53,8 @@ Contact : louis44.boucard@proton.me
 - Catégorie : Lecteurs et éditeurs vidéo
 - Public cible : 18 ans et plus (évite les exigences « famille » et colle à la politique de confidentialité)
 - Publicités : non
-- Accès à l'application : connexion requise. Donner un compte Zynora de test et les identifiants du serveur de démo, avec la phrase :
-  « Zynora est un lecteur. L'utilisateur fournit son propre service IPTV ; le serveur de démo ne diffuse que des vidéos libres de droits. »
+- Accès à l'application : connexion requise. Donner un compte Zynora de test (e-mail + mot de passe) et ces instructions :
+  « 1. Connectez-vous avec le compte fourni. 2. Sur l'écran du fournisseur IPTV, appuyez sur « Pas d'abonnement ? Essayer la démo ». Zynora est un lecteur : l'utilisateur fournit son propre service IPTV. La démo ne contient que des vidéos libres de droits (films ouverts de la Blender Foundation et flux HLS de test publics). »
 
 ## Éléments graphiques
 

@@ -191,7 +191,18 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
                     Text("SE CONNECTER", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                 }
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(8.dp))
+            TextButton(
+                onClick = {
+                    focusManager.clearFocus()
+                    viewModel.tryDemo()
+                },
+                enabled = !state.isLoading,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Pas d'abonnement ? Essayer la démo", color = IptvColors.TextPrimary)
+            }
+            Spacer(Modifier.height(12.dp))
             Text(
                 text = "Astuce : tu peux aussi coller ton lien M3U complet dans le champ URL.",
                 style = MaterialTheme.typography.bodyMedium,
