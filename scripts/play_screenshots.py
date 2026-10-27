@@ -61,6 +61,8 @@ def shot(name, wait=6):
 def main():
     os.makedirs(OUT, exist_ok=True)
     # Barre d'état propre : heure fixe, réseau et batterie pleins, sans notifications.
+    # Pas de bulle « Viewing full screen » à l'ouverture du lecteur.
+    adb("shell", "settings", "put", "secure", "immersive_mode_confirmations", "confirmed")
     adb("shell", "settings", "put", "global", "sysui_demo_allowed", "1")
     for extra in (
         ["-e", "command", "enter"],
@@ -78,7 +80,7 @@ def main():
     if not tap(r"catalogue de démonstration"):
         sys.exit(1)
 
-    shot("1-accueil.png", 15)
+    shot("1-accueil.png", 20)
 
     tap(r"^Films$")
     shot("2-films.png", 10)

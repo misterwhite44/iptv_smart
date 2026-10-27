@@ -4,11 +4,13 @@ name: Captures Play Store
 # l'APK démo (catalogue libre de droits). Résultat : artifact « captures-play-store ».
 on:
   workflow_dispatch:
+  # Relancé aussi quand le script de capture change sur une branche de travail.
   push:
-    branches: [ claude/project-thread-tih42a ]
+    branches: [ 'claude/**' ]
     paths:
       - .github/workflows/screenshots.yml
       - scripts/play_screenshots.py
+      - app/src/main/java/com/misterwhite/iptvsmart/data/xtream/DemoCatalog.kt
 
 permissions:
   contents: write
