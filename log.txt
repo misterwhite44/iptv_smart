@@ -1,0 +1,6 @@
+capture 1-accueil.png
+capture 2-films.png
+capture 3-fiche-film.png
+capture 4-series.png
+capture 5-direct.png
+capture 6-lecteur.png
