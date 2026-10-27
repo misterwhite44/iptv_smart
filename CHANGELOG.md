@@ -11,6 +11,7 @@ Chaque version a aussi sa page dans les
 liste des changements. Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
+## 0.1.43 — 26/10/2026
 ## Prochaine version
 - Ton compte Zynora garde maintenant ton historique, tes reprises « En
   cours » et ton service IPTV (adresse, identifiant, mot de passe) en plus de
