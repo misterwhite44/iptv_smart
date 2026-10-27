@@ -10,6 +10,9 @@ on:
       - .github/workflows/screenshots.yml
       - scripts/play_screenshots.py
 
+permissions:
+  contents: write
+
 jobs:
   screenshots:
     runs-on: ubuntu-latest
@@ -46,10 +49,24 @@ jobs:
             adb shell wm size 1080x1920
             adb shell wm density 420
             adb install -r app/build/outputs/apk/debug/app-debug.apk
-            python3 scripts/play_screenshots.py
+            mkdir -p screenshots
+            python3 scripts/play_screenshots.py 2>&1 | tee screenshots/log.txt
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: captures-play-store
           path: screenshots/
+
+      # Les captures sont aussi poussées sur la branche « play-screenshots »,
+      # pour les récupérer sans télécharger l'artifact.
+      - name: Push screenshots branch
+        if: always()
+        run: |
+          cd screenshots
+          git init -q -b play-screenshots
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Captures Play Store (${{ github.sha }})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" play-screenshots

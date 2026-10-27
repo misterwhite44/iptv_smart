@@ -46,7 +46,8 @@ def tap(pattern, timeout=40):
             adb("shell", "input", "tap", str(pos[0]), str(pos[1]))
             return True
         time.sleep(2)
-    print(f"introuvable : {pattern}", file=sys.stderr)
+    print(f"introuvable : {pattern}", flush=True)
+    shot("debug-" + re.sub(r"[^a-z]+", "-", pattern.lower()).strip("-") + ".png", 0)
     return False
 
 
@@ -75,7 +76,6 @@ def main():
     time.sleep(8)
     tap(r"^J'ai compris$", timeout=15)
     if not tap(r"catalogue de démonstration"):
-        shot("debug-login.png", 0)
         sys.exit(1)
 
     shot("1-accueil.png", 15)
