@@ -53,8 +53,9 @@ Contact : louis44.boucard@proton.me
 - Catégorie : Lecteurs et éditeurs vidéo
 - Public cible : 18 ans et plus (évite les exigences « famille » et colle à la politique de confidentialité)
 - Publicités : non
-- Accès à l'application : connexion requise. Donner un compte Zynora de test et les identifiants du serveur de démo, avec la phrase :
-  « Zynora est un lecteur. L'utilisateur fournit son propre service IPTV ; le serveur de démo ne diffuse que des vidéos libres de droits. »
+- Accès à l'application : connexion requise. Donner un compte Zynora de test (e-mail + mot de passe) et des identifiants Xtream de test qui ne diffusent que du contenu autorisé, avec la phrase :
+  « Zynora est un lecteur. L'utilisateur fournit son propre service IPTV. »
+  La version Play ne contient pas de démo : la démo est un APK à part (release `demo` sur GitHub).
 
 ## Éléments graphiques
 

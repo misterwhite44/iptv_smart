@@ -4,8 +4,12 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// -Pdemo=true : APK de démonstration séparé (catalogue libre de droits intégré),
+// installable à côté de l'appli normale et sans compte Zynora.
+val demoBuild = project.hasProperty("demo")
+
 // Comptes Firebase : actifs seulement si google-services.json (console Firebase) est présent.
-if (file("google-services.json").exists()) {
+if (file("google-services.json").exists() && !demoBuild) {
     apply(plugin = "com.google.gms.google-services")
 }
 
@@ -19,6 +23,9 @@ android {
         targetSdk = 36
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
         versionName = "0.1.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
+        buildConfigField("boolean", "DEMO", demoBuild.toString())
+        manifestPlaceholders["appLabel"] = if (demoBuild) "Zynora IPTV Démo" else "@string/app_name"
+        if (demoBuild) applicationIdSuffix = ".demo"
     }
 
     // Clé de signature fixe pour un usage personnel : chaque nouvel APK

@@ -6,13 +6,16 @@ data class XtreamCredentials(
     val password: String,
 ) {
     fun liveUrl(streamId: String, extension: String = "m3u8") =
-        "$serverUrl/live/$username/$password/$streamId.$extension"
+        if (DemoCatalog.isDemo(this)) DemoCatalog.streamUrl(streamId)
+        else "$serverUrl/live/$username/$password/$streamId.$extension"
 
     fun movieUrl(streamId: String, extension: String) =
-        "$serverUrl/movie/$username/$password/$streamId.$extension"
+        if (DemoCatalog.isDemo(this)) DemoCatalog.streamUrl(streamId)
+        else "$serverUrl/movie/$username/$password/$streamId.$extension"
 
     fun episodeUrl(episodeId: String, extension: String) =
-        "$serverUrl/series/$username/$password/$episodeId.$extension"
+        if (DemoCatalog.isDemo(this)) DemoCatalog.streamUrl(episodeId)
+        else "$serverUrl/series/$username/$password/$episodeId.$extension"
 }
 
 data class AccountInfo(

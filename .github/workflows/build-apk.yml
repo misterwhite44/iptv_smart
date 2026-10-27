@@ -57,6 +57,18 @@ jobs:
           name: Zynora-aab
           path: Zynora.aab
 
+      # APK de démonstration séparé (catalogue libre de droits intégré, identifiant
+      # com.zynora.app.demo), installable à côté de l'appli normale.
+      - name: Build demo APK
+        run: |
+          ./gradlew --no-daemon assembleRelease -Pdemo=true
+          cp app/build/outputs/apk/release/app-release.apk Zynora-Demo.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Zynora-demo-apk
+          path: Zynora-Demo.apk
+
       # Notes de version : la section « ## Prochaine version » du CHANGELOG si
       # elle existe, sinon les messages des commits depuis la version
       # précédente (tag v0.1.N), sans les commits de fusion ni les mentions
@@ -113,6 +125,20 @@ jobs:
           files: |
             Zynora.apk
             IPTVSmart.apk
+
+      - name: Publish demo release
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: demo
+          name: Zynora IPTV Démo
+          body: |
+            APK de démonstration de Zynora ${{ env.VERSION }}, à installer à côté de l'appli normale.
+            Sur l'écran du fournisseur, appuie sur « Ouvrir le catalogue de démonstration » :
+            films ouverts de la Blender Foundation (CC BY) et flux HLS de test publics.
+          prerelease: false
+          make_latest: false
+          files: Zynora-Demo.apk
 
       # Remplace « ## Prochaine version » par le numéro de cette version dans
       # le CHANGELOG. Si main a bougé entre-temps, le push est refusé sans

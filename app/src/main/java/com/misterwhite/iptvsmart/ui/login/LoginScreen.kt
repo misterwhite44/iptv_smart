@@ -1,5 +1,7 @@
 package com.misterwhite.iptvsmart.ui.login
 
+import com.misterwhite.iptvsmart.BuildConfig
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -191,7 +193,20 @@ fun LoginScreen(viewModel: LoginViewModel, onLoggedIn: () -> Unit) {
                     Text("SE CONNECTER", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                 }
             }
-            Spacer(Modifier.height(20.dp))
+            if (BuildConfig.DEMO) {
+                Spacer(Modifier.height(8.dp))
+                TextButton(
+                    onClick = {
+                        focusManager.clearFocus()
+                        viewModel.tryDemo()
+                    },
+                    enabled = !state.isLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Ouvrir le catalogue de démonstration", color = IptvColors.TextPrimary)
+                }
+            }
+            Spacer(Modifier.height(12.dp))
             Text(
                 text = "Astuce : tu peux aussi coller ton lien M3U complet dans le champ URL.",
                 style = MaterialTheme.typography.bodyMedium,
