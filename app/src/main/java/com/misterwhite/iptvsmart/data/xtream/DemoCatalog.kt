@@ -1,9 +1,10 @@
 package com.misterwhite.iptvsmart.data.xtream
 
 /**
- * Service de démonstration intégré à l'appli : quelques vidéos libres de droits
- * (films ouverts de la Blender Foundation, flux HLS de test publics), pour essayer
- * Zynora sans abonnement IPTV. Utilisé aussi par les vérificateurs du Play Store.
+ * Service de démonstration caché : quelques vidéos libres de droits (films ouverts
+ * de la Blender Foundation, flux HLS de test publics) pour les testeurs et les
+ * vérificateurs du Play Store. Rien ne l'affiche dans l'appli : il s'ouvre en saisissant
+ * « demo » comme serveur, identifiant et mot de passe.
  * Aucune requête n'est envoyée à [SERVER] : XtreamClient répond avec ces données.
  */
 object DemoCatalog {
@@ -14,6 +15,11 @@ object DemoCatalog {
     val credentials = XtreamCredentials(SERVER, USERNAME, PASSWORD)
 
     fun isDemo(credentials: XtreamCredentials) = credentials.serverUrl == SERVER
+
+    /** Vrai si l'écran du fournisseur a été rempli avec les codes de la démo. */
+    fun matchesLogin(server: String, username: String, password: String) =
+        server.trim().equals(USERNAME, ignoreCase = true) &&
+            username.trim() == USERNAME && password.trim() == PASSWORD
 
     private const val GTV = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample"
     private const val BLENDER = "© Blender Foundation, sous licence Creative Commons Attribution (blender.org)."

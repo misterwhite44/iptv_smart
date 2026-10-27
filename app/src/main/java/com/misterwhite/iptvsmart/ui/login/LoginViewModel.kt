@@ -60,18 +60,17 @@ class LoginViewModel(
 
     fun onKeepOnAccountChange(value: Boolean) = _state.update { it.copy(keepOnAccount = value) }
 
-    /** Ouvre le catalogue de démonstration intégré, sans le garder sur le compte Zynora. */
-    fun tryDemo() {
-        if (_state.value.isLoading) return
-        store.save(DemoCatalog.credentials)
-        store.saveLiveFormat(DemoCatalog.account.allowedOutputFormats)
-        store.setKeepOnAccount(false)
-        _state.update { it.copy(error = null, loggedIn = true) }
-    }
-
     fun submit() {
         val current = _state.value
         if (!current.canSubmit) return
+        if (DemoCatalog.matchesLogin(current.serverUrl, current.username, current.password)) {
+            // Démo cachée pour les testeurs et les vérificateurs du Play Store : jamais gardée sur le compte.
+            store.save(DemoCatalog.credentials)
+            store.saveLiveFormat(DemoCatalog.account.allowedOutputFormats)
+            store.setKeepOnAccount(false)
+            _state.update { it.copy(error = null, loggedIn = true) }
+            return
+        }
         val credentials = XtreamCredentials(
             serverUrl = XtreamClient.normalizeServerUrl(current.serverUrl),
             username = current.username.trim(),
