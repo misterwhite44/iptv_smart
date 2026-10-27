@@ -18,7 +18,7 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
-## Prochaine version
+## 0.1.58 — 27/10/2026
 - Démo cachée pour les vérificateurs du Play Store : en saisissant « demo »
   comme serveur, identifiant et mot de passe, l'appli ouvre le catalogue de
   démonstration. Aucun bouton visible, rien ne change pour les autres.
