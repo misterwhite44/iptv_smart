@@ -29,6 +29,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.CastConnected
+import androidx.compose.material.icons.filled.ClosedCaption
+import androidx.compose.material.icons.filled.ClosedCaptionDisabled
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -72,6 +74,7 @@ import coil.compose.AsyncImage
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaMetadata
 import com.google.android.gms.cast.MediaSeekOptions
+import com.google.android.gms.cast.TextTrackStyle
 import com.google.android.gms.cast.framework.CastSession
 import com.misterwhite.iptvsmart.player.PlayQueue
 import com.misterwhite.iptvsmart.player.PlayerActivity
@@ -92,6 +95,9 @@ data class CastSnapshot(
     val durationMs: Long,
     val volume: Float,
     val hasMedia: Boolean,
+    /** La Chromecast a reçu une piste de sous-titres français pour ce contenu. */
+    val hasSubtitles: Boolean = false,
+    val subtitlesOn: Boolean = false,
 )
 
 /** Commandes envoyées directement à la Chromecast connectée. */
@@ -119,7 +125,16 @@ object CastRemote {
             durationMs = if (duration > 0) duration else 0L,
             volume = runCatching { session.volume.toFloat() }.getOrDefault(0f),
             hasMedia = client != null && info != null && (client.isPlaying || client.isPaused || client.isBuffering),
+            hasSubtitles = info?.mediaTracks?.any { it.id == IptvMediaItemConverter.SUBTITLE_TRACK_ID } == true,
+            subtitlesOn = client?.mediaStatus?.activeTrackIds?.contains(IptvMediaItemConverter.SUBTITLE_TRACK_ID) == true,
         )
+    }
+
+    /** Affiche ou masque les sous-titres français sur la télé. */
+    fun setSubtitles(context: Context, on: Boolean) {
+        val client = session(context)?.remoteMediaClient ?: return
+        if (on) runCatching { client.setTextTrackStyle(TextTrackStyle.fromSystemSettings(context)) }
+        client.setActiveMediaTracks(if (on) longArrayOf(IptvMediaItemConverter.SUBTITLE_TRACK_ID) else longArrayOf())
     }
 
     fun togglePlayback(context: Context) {
@@ -188,6 +203,9 @@ fun CastRemoteScreen(
     onClose: () -> Unit,
     castButton: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    /** Bouton des sous-titres français : null s'il n'y en a pas pour ce contenu. */
+    onSubtitles: ((on: Boolean) -> Unit)? = null,
+    subtitlesLoading: Boolean = false,
 ) {
     val context = LocalContext.current
     val snapshot by rememberCastSnapshot()
@@ -358,6 +376,25 @@ fun CastRemoteScreen(
 
             // Volume de la télé.
             VolumeBar(volume = s?.volume ?: 0f, onVolume = { CastRemote.setVolume(context, it) })
+
+            if (onSubtitles != null && s?.hasSubtitles == true) {
+                Spacer(Modifier.height(20.dp))
+                val on = s.subtitlesOn
+                OutlinedButton(onClick = { onSubtitles(!on) }, enabled = !subtitlesLoading) {
+                    if (subtitlesLoading) {
+                        CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    } else {
+                        Icon(
+                            if (on) Icons.Filled.ClosedCaption else Icons.Filled.ClosedCaptionDisabled,
+                            contentDescription = null,
+                            tint = if (on) IptvColors.AccentBright else Color.White,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (on) "Sous-titres français : activés" else "Sous-titres français : désactivés", color = Color.White)
+                }
+            }
 
             Spacer(Modifier.height(28.dp))
 

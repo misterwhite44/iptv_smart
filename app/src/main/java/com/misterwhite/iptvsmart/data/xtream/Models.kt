@@ -76,6 +76,8 @@ data class MovieDetails(
     val genre: String?,
     val releaseDate: String?,
     val duration: String?,
+    /** Identifiant TMDB, quand le serveur le donne (sert à trouver des sous-titres). */
+    val tmdbId: String? = null,
 )
 
 data class Episode(
@@ -93,6 +95,8 @@ data class SeriesDetails(
     val series: Series,
     val cast: String?,
     val seasons: Map<Int, List<Episode>>,
+    /** Identifiant TMDB de la série, quand le serveur le donne. */
+    val tmdbId: String? = null,
 )
 
 /** Un type de contenu complet : catégories et éléments. */

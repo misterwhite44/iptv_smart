@@ -24,6 +24,8 @@ android {
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
         versionName = "0.1.${System.getenv("GITHUB_RUN_NUMBER") ?: "0"}"
         buildConfigField("boolean", "DEMO", demoBuild.toString())
+        // Clé d'appli OpenSubtitles (secret GitHub) : sans elle, pas de sous-titres externes.
+        buildConfigField("String", "OPENSUBTITLES_API_KEY", "\"${System.getenv("OPENSUBTITLES_API_KEY").orEmpty().trim()}\"")
         manifestPlaceholders["appLabel"] = if (demoBuild) "Zynora IPTV Démo" else "@string/app_name"
         if (demoBuild) applicationIdSuffix = ".demo"
     }

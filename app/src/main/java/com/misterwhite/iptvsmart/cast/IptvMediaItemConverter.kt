@@ -9,6 +9,7 @@ import com.google.android.gms.cast.HlsSegmentFormat
 import com.google.android.gms.cast.HlsVideoSegmentFormat
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaQueueItem
+import com.google.android.gms.cast.MediaTrack
 
 /**
  * Précise à la Chromecast comment lire les flux IPTV : les chaînes sont du
@@ -31,6 +32,18 @@ class IptvMediaItemConverter : MediaItemConverter {
             .setStreamType(if (isLive) MediaInfo.STREAM_TYPE_LIVE else MediaInfo.STREAM_TYPE_BUFFERED)
             .setMetadata(info.metadata)
             .setCustomData(info.customData)
+        // Sous-titres servis par le téléphone : la Chromecast ne les charge
+        // que quand on les active depuis la télécommande.
+        val tracks = mediaItem.localConfiguration?.subtitleConfigurations.orEmpty().mapIndexed { i, sub ->
+            MediaTrack.Builder(SUBTITLE_TRACK_ID + i, MediaTrack.TYPE_TEXT)
+                .setSubtype(MediaTrack.SUBTYPE_SUBTITLES)
+                .setContentId(sub.uri.toString())
+                .setContentType(sub.mimeType ?: MimeTypes.TEXT_VTT)
+                .setLanguage(sub.language ?: "fr")
+                .setName(sub.label ?: "Français")
+                .build()
+        }
+        if (tracks.isNotEmpty()) builder.setMediaTracks(tracks)
         if (mimeType == MimeTypes.APPLICATION_M3U8) {
             builder.setHlsSegmentFormat(HlsSegmentFormat.TS)
             builder.setHlsVideoSegmentFormat(HlsVideoSegmentFormat.MPEG2_TS)
@@ -42,5 +55,7 @@ class IptvMediaItemConverter : MediaItemConverter {
 
     companion object {
         const val LIVE_PREFIX = "live:"
+        /** Identifiant de la piste de sous-titres français envoyée à la Chromecast. */
+        const val SUBTITLE_TRACK_ID = 100L
     }
 }

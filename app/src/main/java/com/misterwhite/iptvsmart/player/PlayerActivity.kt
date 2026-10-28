@@ -70,6 +70,12 @@ import com.misterwhite.iptvsmart.cast.CastRemote
 import com.misterwhite.iptvsmart.cast.CastRemoteScreen
 import com.misterwhite.iptvsmart.cast.CastSupport
 import com.misterwhite.iptvsmart.cast.IptvMediaItemConverter
+import com.misterwhite.iptvsmart.cast.SubtitleServer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -121,6 +127,8 @@ class PlayerActivity : FragmentActivity() {
     private val resizeMode = mutableIntStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT)
 
     private val handler = Handler(Looper.getMainLooper())
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val castSubtitlesLoading = mutableStateOf(false)
     private val saveTick = object : Runnable {
         override fun run() {
             saveProgress()
@@ -164,6 +172,7 @@ class PlayerActivity : FragmentActivity() {
             it.release()
         }
         castPlayer = null
+        scope.cancel()
         super.onDestroy()
     }
 
@@ -248,8 +257,20 @@ class PlayerActivity : FragmentActivity() {
         val item = items[index]
         // La Chromecast ne lit pas les flux .ts : elle reçoit toujours le flux HLS.
         val url = if (!forCast && index in usedFallback && item.fallbackUrl != null) item.fallbackUrl else item.url
+        // Pour la Chromecast : sous-titres français externes, servis par le téléphone.
+        val subtitles = item.subtitleSearch
+            ?.takeIf { forCast && ExternalSubtitles.isAvailable && item.kind != MediaKind.LIVE }
+            ?.let { SubtitleServer.urlFor(this, item.key, it) }
+            ?.let {
+                MediaItem.SubtitleConfiguration.Builder(Uri.parse(it))
+                    .setMimeType(MimeTypes.TEXT_VTT)
+                    .setLanguage("fr")
+                    .setLabel("Français")
+                    .build()
+            }
         return MediaItem.Builder()
             .setUri(url)
+            .setSubtitleConfigurations(listOfNotNull(subtitles))
             .setMediaId(if (item.kind == MediaKind.LIVE) IptvMediaItemConverter.LIVE_PREFIX + index else "item:$index")
             .setMimeType(mimeTypeOf(url))
             .setMediaMetadata(
@@ -497,6 +518,31 @@ class PlayerActivity : FragmentActivity() {
         exo.trackSelectionParameters = params
     }
 
+    /**
+     * Bouton « Sous-titres » de la télécommande : on télécharge d'abord les
+     * sous-titres sur le téléphone, pour pouvoir dire tout de suite s'il n'y
+     * en a pas, puis la Chromecast vient les chercher.
+     */
+    private fun setCastSubtitles(on: Boolean) {
+        if (!on) {
+            CastRemote.setSubtitles(this, false)
+            return
+        }
+        val item = items.getOrNull(castIndex) ?: return
+        val search = item.subtitleSearch ?: return
+        if (castSubtitlesLoading.value) return
+        castSubtitlesLoading.value = true
+        scope.launch {
+            val result = ExternalSubtitles.french(this@PlayerActivity, item.key, search)
+            castSubtitlesLoading.value = false
+            if (result is ExternalSubtitles.Result.Found) {
+                if (isCasting.value && castIndex == items.indexOf(item)) CastRemote.setSubtitles(this@PlayerActivity, true)
+            } else {
+                ExternalSubtitles.message(result)?.let { Toast.makeText(this@PlayerActivity, it, Toast.LENGTH_LONG).show() }
+            }
+        }
+    }
+
     private fun onItemStarted(index: Int) {
         val item = items.getOrNull(index) ?: return
         title.value = item.title
@@ -673,6 +719,8 @@ class PlayerActivity : FragmentActivity() {
                     // La Chromecast continue : le mini-lecteur de l'accueil prend le relais.
                     onClose = { finish() },
                     castButton = { PlayerExtraActions() },
+                    onSubtitles = if (item?.subtitleSearch != null) ::setCastSubtitles else null,
+                    subtitlesLoading = castSubtitlesLoading.value,
                 )
             }
 

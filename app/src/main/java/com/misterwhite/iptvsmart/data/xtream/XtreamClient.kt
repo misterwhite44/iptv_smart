@@ -123,6 +123,7 @@ class XtreamClient(private val http: OkHttpClient) {
             genre = info?.str("genre"),
             releaseDate = info?.str("releasedate") ?: info?.str("release_date"),
             duration = info?.str("duration"),
+            tmdbId = (info?.str("tmdb_id") ?: info?.str("tmdb"))?.takeIf { it.all(Char::isDigit) && it != "0" },
         )
     }
 
@@ -164,6 +165,7 @@ class XtreamClient(private val http: OkHttpClient) {
             ),
             cast = info?.str("cast"),
             seasons = seasons.toSortedMap(),
+            tmdbId = (info?.str("tmdb_id") ?: info?.str("tmdb"))?.takeIf { it.all(Char::isDigit) && it != "0" },
         )
     }
 

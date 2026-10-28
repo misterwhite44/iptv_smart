@@ -62,6 +62,7 @@ class Playback(private val context: Context, private val container: AppContainer
                     url = c.movieUrl(movie.id, movie.extension),
                     extension = movie.extension,
                     startPositionMs = resume,
+                    subtitleSearch = SubtitleSearch(movie.name, details.releaseDate?.take(4), details.tmdbId),
                 )
             ),
             0,
@@ -88,6 +89,7 @@ class Playback(private val context: Context, private val container: AppContainer
                 startPositionMs = if (ep.id == episode.id) {
                     library.entry(key)?.takeIf { it.isResumable }?.positionMs ?: 0
                 } else 0,
+                subtitleSearch = SubtitleSearch(details.series.name, details.series.year, details.tmdbId, ep.season, ep.number),
             )
         }
         start(queue, 0)
@@ -110,6 +112,7 @@ class Playback(private val context: Context, private val container: AppContainer
                     url = c.movieUrl(entry.contentId, extension),
                     extension = extension,
                     startPositionMs = entry.positionMs,
+                    subtitleSearch = SubtitleSearch(entry.title, entry.subtitle?.take(4)?.takeIf { it.all(Char::isDigit) }),
                 )
             ),
             0,

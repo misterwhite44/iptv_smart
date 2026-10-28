@@ -16,6 +16,18 @@ data class PlayItem(
     val fallbackUrl: String? = null,
     val extension: String?,
     val startPositionMs: Long = 0,
+    /** De quoi chercher des sous-titres externes (films et épisodes). */
+    val subtitleSearch: SubtitleSearch? = null,
+)
+
+/** Ce qu'on sait du contenu pour chercher ses sous-titres sur OpenSubtitles. */
+data class SubtitleSearch(
+    val title: String,
+    val year: String? = null,
+    /** TMDB du film, ou de la série pour un épisode. */
+    val tmdbId: String? = null,
+    val season: Int? = null,
+    val episode: Int? = null,
 )
 
 /**
