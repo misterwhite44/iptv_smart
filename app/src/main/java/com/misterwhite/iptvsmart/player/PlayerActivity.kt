@@ -1,5 +1,6 @@
 package com.misterwhite.iptvsmart.player
 
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -60,9 +61,10 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.cast.CastPlayer
 import androidx.media3.cast.SessionAvailabilityListener
-import androidx.compose.material.icons.filled.Cast
 import com.misterwhite.iptvsmart.ui.premium.LocalPremium
 import com.misterwhite.iptvsmart.ui.premium.PremiumCastButton
+import com.misterwhite.iptvsmart.cast.CastRemote
+import com.misterwhite.iptvsmart.cast.CastRemoteScreen
 import com.misterwhite.iptvsmart.cast.CastSupport
 import com.misterwhite.iptvsmart.cast.IptvMediaItemConverter
 import androidx.media3.datasource.okhttp.OkHttpDataSource
@@ -124,12 +126,9 @@ class PlayerActivity : FragmentActivity() {
         currentIndex = savedInstanceState?.getInt(STATE_INDEX) ?: PlayQueue.startIndex
         resumePositionMs = savedInstanceState?.getLong(STATE_POSITION, C.TIME_UNSET) ?: C.TIME_UNSET
 
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowInsetsControllerCompat(window, window.decorView).apply {
-            hide(WindowInsetsCompat.Type.systemBars())
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
+        // Chromecast déjà connectée : on ouvre directement en portrait.
+        applyCastLayout(casting = CastRemote.snapshot(this) != null)
 
         CastSupport.castContext(this)?.let { context ->
             castAvailable = true
@@ -312,6 +311,33 @@ class PlayerActivity : FragmentActivity() {
         }
     }
 
+    /**
+     * Pendant un cast, le téléphone devient une télécommande en portrait, avec
+     * ses barres système et sans garder l'écran allumé. Sinon, lecteur plein
+     * écran en paysage.
+     */
+    private fun applyCastLayout(casting: Boolean) {
+        requestedOrientation = if (casting) {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            if (casting) {
+                show(WindowInsetsCompat.Type.systemBars())
+            } else {
+                hide(WindowInsetsCompat.Type.systemBars())
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        }
+        if (casting) {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        playerView?.keepScreenOn = !casting
+    }
+
     /** Index réel dans la file de l'élément en cours, sur le téléphone ou la Chromecast. */
     private fun currentItemIndex(): Int =
         if (isCasting.value) castIndex else player?.currentMediaItemIndex ?: currentIndex
@@ -327,6 +353,7 @@ class PlayerActivity : FragmentActivity() {
         // abonnements n'autorisent qu'une connexion à la fois.
         local?.stop()
         isCasting.value = true
+        applyCastLayout(casting = true)
         error.value = null
         castRetries = 0
         playerView?.player = castPlayer
@@ -334,6 +361,9 @@ class PlayerActivity : FragmentActivity() {
         trackedIndex = index
         onItemStarted(index)
         handler.removeCallbacks(castRetry)
+        // Retour sur la télécommande depuis le mini-lecteur : la télé lit déjà
+        // ce contenu, on ne le relance pas.
+        if (CastRemote.isPlayingUrl(this, item.url)) return
         handler.postDelayed({ castItem(index, position) }, CAST_HANDOFF_DELAY_MS)
     }
 
@@ -360,6 +390,7 @@ class PlayerActivity : FragmentActivity() {
         val position = castPlayer?.currentPosition ?: 0L
         saveProgress()
         isCasting.value = false
+        applyCastLayout(casting = false)
         error.value = null
         val local = player ?: return
         playerView?.player = local
@@ -498,7 +529,7 @@ class PlayerActivity : FragmentActivity() {
     @Composable
     private fun PlayerScreen() {
         val favorites by library.favorites.collectAsState()
-        val showOverlay = controlsVisible.value || error.value != null
+        val showOverlay = (controlsVisible.value || error.value != null) && !isCasting.value
         val favKey = favoriteKey(currentItem().takeIf { title.value.isNotEmpty() })
         val isFavorite = favKey != null && favorites.any { it.key == favKey }
 
@@ -574,18 +605,22 @@ class PlayerActivity : FragmentActivity() {
                 }
             }
 
-            if (isCasting.value && error.value == null) {
-                // Au-dessus des commandes centrales pour ne pas les cacher.
-                Column(
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = 72.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Icon(Icons.Filled.Cast, contentDescription = null, tint = Color.White, modifier = Modifier.width(56.dp).height(56.dp))
-                    Spacer(Modifier.height(12.dp))
-                    Text("Lecture sur ta Chromecast", color = Color.White, style = MaterialTheme.typography.titleMedium)
-                }
+            if (isCasting.value) {
+                val item = currentItem()
+                CastRemoteScreen(
+                    title = title.value,
+                    subtitle = subtitle.value,
+                    image = item?.image,
+                    isLive = item?.kind == MediaKind.LIVE,
+                    tallArtwork = item?.kind == MediaKind.MOVIE,
+                    hasPrevious = castIndex > 0,
+                    hasNext = castIndex + 1 < items.size,
+                    onPrevious = { saveProgress(); castItem(castIndex - 1, 0L) },
+                    onNext = { saveProgress(); castItem(castIndex + 1, 0L) },
+                    // La Chromecast continue : le mini-lecteur de l'accueil prend le relais.
+                    onClose = { finish() },
+                    castButton = { PlayerExtraActions() },
+                )
             }
 
             error.value?.let { message ->

@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import com.misterwhite.iptvsmart.cast.MiniCastBar
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.IconButton
@@ -147,12 +149,20 @@ fun MainScreen(
             // Écran large (paysage, tablette) : menu d'icônes à gauche.
             Row(Modifier.fillMaxSize()) {
                 SideRail(tab, profileViewModel.username, onSelect = { tabIndex = it.ordinal })
-                Box(Modifier.weight(1f).fillMaxSize()) { body() }
+                Box(Modifier.weight(1f).fillMaxSize()) {
+                    body()
+                    MiniCastBar(Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
+                }
             }
         } else {
             Scaffold(
                 containerColor = IptvColors.Background,
-                bottomBar = { BottomBar(tab, onSelect = { tabIndex = it.ordinal }) },
+                bottomBar = {
+                    Column {
+                        MiniCastBar()
+                        BottomBar(tab, onSelect = { tabIndex = it.ordinal })
+                    }
+                },
             ) { padding ->
                 Box(
                     Modifier
