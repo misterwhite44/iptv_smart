@@ -18,6 +18,16 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
+## Prochaine version
+- Chromecast : nouvelle télécommande façon Disney+ sur le téléphone, en
+  portrait. Grande image, titre, « Lecture sur <ta télé> », barre de
+  lecture avec temps écoulé et restant, gros bouton lecture/pause, ±10
+  secondes, épisode ou chaîne précédent/suivant, volume de la télé et bouton
+  « Arrêter la diffusion » (la lecture revient alors sur le téléphone).
+- Mini-lecteur Chromecast en bas de l'appli : quand tu quittes la
+  télécommande, la télé continue et tu gardes lecture/pause ; un appui
+  rouvre la télécommande sans relancer le flux.
+
 ## 0.1.58 — 27/10/2026
 - Démo cachée pour les vérificateurs du Play Store : en saisissant « demo »
   comme serveur, identifiant et mot de passe, l'appli ouvre le catalogue de
