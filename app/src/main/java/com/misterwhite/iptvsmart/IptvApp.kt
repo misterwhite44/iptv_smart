@@ -11,6 +11,7 @@ import com.misterwhite.iptvsmart.data.account.AccountSync
 import com.misterwhite.iptvsmart.data.billing.BillingRepository
 import com.misterwhite.iptvsmart.data.billing.PremiumRepository
 import com.misterwhite.iptvsmart.data.xtream.XtreamClient
+import com.misterwhite.iptvsmart.player.ExternalSubtitles
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -53,6 +54,10 @@ class AppContainer(app: Application) {
     val account = AccountRepository(app)
     val accountSync = AccountSync(account, library, credentialsStore)
     val premium = PremiumRepository(app, account, BillingRepository(app))
+
+    init {
+        ExternalSubtitles.init(httpClient)
+    }
 
     companion object {
         const val USER_AGENT = "Mozilla/5.0 (Linux; Android) Zynora/1.0"

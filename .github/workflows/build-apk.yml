@@ -15,6 +15,7 @@ jobs:
     env:
       UPLOAD_KEYSTORE_BASE64: ${{ secrets.UPLOAD_KEYSTORE_BASE64 }}
       UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.UPLOAD_KEYSTORE_PASSWORD }}
+      OPENSUBTITLES_API_KEY: ${{ secrets.OPENSUBTITLES_API_KEY }}
     steps:
       - uses: actions/checkout@v4
         with:
