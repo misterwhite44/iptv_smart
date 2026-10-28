@@ -18,7 +18,7 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
-## Prochaine version
+## 0.1.64 — 28/10/2026
 - Sous-titres français automatiques sur les films et séries en VO : quand
   le fichier contient une piste de sous-titres en français et que le son
   n'est pas en français, elle s'active toute seule. Rien ne change en VF.
