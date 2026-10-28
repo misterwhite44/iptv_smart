@@ -18,7 +18,7 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
-## Prochaine version
+## 0.1.62 — 28/10/2026
 - Chromecast : nouvelle télécommande façon Disney+ sur le téléphone, en
   portrait. Grande image, titre, « Lecture sur <ta télé> », barre de
   lecture avec temps écoulé et restant, gros bouton lecture/pause, ±10
