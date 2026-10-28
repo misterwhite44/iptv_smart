@@ -18,6 +18,16 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
+## Prochaine version
+- Sous-titres français automatiques sur les films et séries en VO : quand
+  le fichier contient une piste de sous-titres en français et que le son
+  n'est pas en français, elle s'active toute seule. Rien ne change en VF.
+- Nouveau bouton « CC » dans le lecteur pour choisir ou couper les
+  sous-titres du fichier. Un choix fait à la main n'est plus modifié
+  jusqu'à la fermeture du lecteur.
+- Profil > Lecture : interrupteur pour désactiver les sous-titres français
+  automatiques.
+
 ## 0.1.62 — 28/10/2026
 - Chromecast : nouvelle télécommande façon Disney+ sur le téléphone, en
   portrait. Grande image, titre, « Lecture sur <ta télé> », barre de

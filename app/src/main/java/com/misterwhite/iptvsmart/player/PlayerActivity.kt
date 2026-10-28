@@ -58,6 +58,9 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.TrackSelectionParameters
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.cast.CastPlayer
 import androidx.media3.cast.SessionAvailabilityListener
@@ -101,6 +104,15 @@ class PlayerActivity : FragmentActivity() {
     /** Index des chaînes passées en secours sur le flux .ts. */
     private val usedFallback = mutableSetOf<Int>()
     private var trackedIndex = -1
+
+    /** Pistes choisies, gardées quand le lecteur est recréé (retour dans l'appli). */
+    private var trackParams: TrackSelectionParameters? = null
+    /** Derniers réglages posés par le choix automatique des sous-titres. */
+    private var autoSubtitleParams: TrackSelectionParameters? = null
+    /** Élément et langue audio pour lesquels les sous-titres ont déjà été choisis. */
+    private var subtitlesDecidedFor: Pair<Int, String?>? = null
+    /** L'utilisateur a choisi lui-même ses pistes : on ne touche plus à rien. */
+    private var userPickedTracks = false
 
     private val title = mutableStateOf("")
     private val subtitle = mutableStateOf<String?>(null)
@@ -192,6 +204,9 @@ class PlayerActivity : FragmentActivity() {
             )
             .setHandleAudioBecomingNoisy(true)
             .build()
+        trackParams?.let { exo.trackSelectionParameters = it }
+        autoSubtitleParams = trackParams
+        subtitlesDecidedFor = null
 
         val start = items[currentIndex]
         val startPosition = when {
@@ -222,6 +237,7 @@ class PlayerActivity : FragmentActivity() {
         } else {
             currentIndex = castIndex
         }
+        trackParams = exo.trackSelectionParameters
         exo.removeListener(listener)
         exo.release()
         player = null
@@ -425,6 +441,14 @@ class PlayerActivity : FragmentActivity() {
             if (playbackState == Player.STATE_READY) error.value = null
         }
 
+        override fun onTracksChanged(tracks: Tracks) = applyAutoSubtitles(tracks)
+
+        override fun onTrackSelectionParametersChanged(parameters: TrackSelectionParameters) {
+            // Un changement qui ne vient pas de nous : l'utilisateur est passé
+            // par le menu des pistes, son choix est prioritaire.
+            if (parameters != autoSubtitleParams) userPickedTracks = true
+        }
+
         override fun onPlayerError(e: PlaybackException) {
             if (isCasting.value) return
             val exo = player ?: return
@@ -444,6 +468,33 @@ class PlayerActivity : FragmentActivity() {
             }
             error.value = friendlyError(e)
         }
+    }
+
+    /**
+     * Films et épisodes en VO : on active tout seul les sous-titres français
+     * intégrés au fichier, s'il y en a. En VF, on laisse le choix par défaut
+     * (sous-titres forcés seulement).
+     */
+    private fun applyAutoSubtitles(tracks: Tracks) {
+        val exo = player ?: return
+        if (isCasting.value || userPickedTracks || !SubtitlePrefs.autoFrench(this)) return
+        val index = exo.currentMediaItemIndex
+        if (items.getOrNull(index)?.kind == MediaKind.LIVE) return
+        val audio = Subtitles.selectedAudio(tracks) ?: return
+        val decision = index to audio.language
+        if (subtitlesDecidedFor == decision) return
+        subtitlesDecidedFor = decision
+
+        val builder = exo.trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_TEXT)
+        val french = Subtitles.frenchTrack(tracks)
+        if (!Subtitles.isFrench(audio) && french != null) {
+            builder.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                .setOverrideForType(TrackSelectionOverride(french.first.mediaTrackGroup, french.second))
+        }
+        val params = builder.build()
+        if (params == exo.trackSelectionParameters) return
+        autoSubtitleParams = params
+        exo.trackSelectionParameters = params
     }
 
     private fun onItemStarted(index: Int) {
@@ -541,6 +592,8 @@ class PlayerActivity : FragmentActivity() {
                         setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
                         setShowNextButton(true)
                         setShowPreviousButton(true)
+                        // Bouton « CC » : choisir ou couper les sous-titres du fichier.
+                        setShowSubtitleButton(true)
                         setControllerVisibilityListener(
                             PlayerView.ControllerVisibilityListener { visibility ->
                                 controlsVisible.value = visibility == View.VISIBLE

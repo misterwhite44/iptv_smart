@@ -31,6 +31,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,12 +45,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.misterwhite.iptvsmart.player.SubtitlePrefs
 import com.misterwhite.iptvsmart.BuildConfig
 import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.data.MediaKind
@@ -175,6 +178,31 @@ fun ProfileTab(
         } else {
             items(watched.take(15), key = { "h" + it.key }) { entry ->
                 HistoryRow(entry, onClick = { actions.resume(entry) })
+            }
+        }
+
+        item(key = "playback") {
+            val context = LocalContext.current
+            var autoFrench by remember { mutableStateOf(SubtitlePrefs.autoFrench(context)) }
+            Section("Lecture") {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Sous-titres français automatiques", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            "Sur les films et séries en VO, active les sous-titres français du fichier quand il en a.",
+                            color = IptvColors.TextSecondary,
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Switch(
+                        checked = autoFrench,
+                        onCheckedChange = {
+                            autoFrench = it
+                            SubtitlePrefs.setAutoFrench(context, it)
+                        },
+                    )
+                }
             }
         }
 
