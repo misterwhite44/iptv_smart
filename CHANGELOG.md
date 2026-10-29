@@ -18,7 +18,7 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
-## Prochaine version
+## 0.1.68 — 29/10/2026
 - Séries : les épisodes que le serveur envoie en double ne s'affichent
   plus qu'une fois dans la liste (un seul épisode par numéro et par saison).
 
