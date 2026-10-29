@@ -153,9 +153,10 @@ class XtreamClient(private val http: OkHttpClient) {
                 )
             }
             list.groupBy { it.season }.forEach { (season, eps) ->
-                seasons[season] = (seasons[season].orEmpty() + eps).sortedBy { it.number }
+                seasons[season] = seasons[season].orEmpty() + eps
             }
         }
+        seasons.replaceAll { _, eps -> dedupeEpisodes(eps) }
         return SeriesDetails(
             series = series.copy(
                 cover = series.cover ?: info?.str("cover"),
@@ -168,6 +169,21 @@ class XtreamClient(private val http: OkHttpClient) {
             tmdbId = (info?.str("tmdb_id") ?: info?.str("tmdb"))?.takeIf { it.all(Char::isDigit) && it != "0" },
         )
     }
+
+    /**
+     * Certains serveurs listent le même épisode plusieurs fois (même id, ou plusieurs
+     * copies avec le même numéro). On n'en garde qu'un par numéro : celui qui a le plus d'infos.
+     */
+    private fun dedupeEpisodes(eps: List<Episode>): List<Episode> {
+        val unique = eps.distinctBy { it.id }
+        val numbered = unique.filter { it.number > 0 }
+            .groupBy { it.number }
+            .map { (_, copies) -> copies.maxBy { it.richness() } }
+        return (numbered + unique.filter { it.number <= 0 }).sortedBy { it.number }
+    }
+
+    private fun Episode.richness() =
+        (if (image != null) 1 else 0) + (if (!plot.isNullOrBlank()) 1 else 0) + (if ((durationSecs ?: 0) > 0) 1 else 0)
 
     suspend fun categories(credentials: XtreamCredentials, type: ContentType): List<Category> {
         if (DemoCatalog.isDemo(credentials)) return DemoCatalog.categories(type)
