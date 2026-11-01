@@ -70,6 +70,7 @@ import com.misterwhite.iptvsmart.cast.CastRemote
 import com.misterwhite.iptvsmart.cast.CastRemoteScreen
 import com.misterwhite.iptvsmart.cast.CastSupport
 import com.misterwhite.iptvsmart.cast.IptvMediaItemConverter
+import com.misterwhite.iptvsmart.cast.LiveCastProxy
 import com.misterwhite.iptvsmart.cast.SubtitleServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -257,6 +258,14 @@ class PlayerActivity : FragmentActivity() {
         val item = items[index]
         // La Chromecast ne lit pas les flux .ts : elle reçoit toujours le flux HLS.
         val url = if (!forCast && index in usedFallback && item.fallbackUrl != null) item.fallbackUrl else item.url
+        // Direct sur la Chromecast : le flux HLS passe par le relais du
+        // téléphone, qui ajoute les en-têtes CORS exigés par la télé.
+        val castLiveUrl = if (forCast && item.kind == MediaKind.LIVE) {
+            val hls = if (url.endsWith(".ts", ignoreCase = true)) url.dropLast(3) + ".m3u8" else url
+            LiveCastProxy.urlFor(this, container.httpClient, hls) ?: hls
+        } else {
+            null
+        }
         // Pour la Chromecast : sous-titres français externes, servis par le téléphone.
         val subtitles = item.subtitleSearch
             ?.takeIf { forCast && ExternalSubtitles.isAvailable && item.kind != MediaKind.LIVE }
@@ -269,12 +278,14 @@ class PlayerActivity : FragmentActivity() {
                     .build()
             }
         return MediaItem.Builder()
-            .setUri(url)
+            .setUri(castLiveUrl ?: url)
             .setSubtitleConfigurations(listOfNotNull(subtitles))
             .setMediaId(if (item.kind == MediaKind.LIVE) IptvMediaItemConverter.LIVE_PREFIX + index else "item:$index")
-            .setMimeType(mimeTypeOf(url))
+            .setMimeType(mimeTypeOf(castLiveUrl ?: url))
             .setMediaMetadata(
                 MediaMetadata.Builder()
+                    // Lien d'origine : la télécommande retrouve la chaîne même via le relais.
+                    .setExtras(Bundle().apply { putString(IptvMediaItemConverter.ORIGINAL_URL, item.url) })
                     .setTitle(item.title)
                     .setArtist(item.subtitle)
                     .setArtworkUri(item.image?.let(Uri::parse))
@@ -423,6 +434,7 @@ class PlayerActivity : FragmentActivity() {
         if (!isCasting.value) return
         handler.removeCallbacks(castRetry)
         handler.removeCallbacks(castWatchdog)
+        LiveCastProxy.stop()
         val index = castIndex
         val position = castPlayer?.currentPosition ?: 0L
         saveProgress()

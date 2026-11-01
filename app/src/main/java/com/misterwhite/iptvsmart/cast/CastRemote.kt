@@ -117,7 +117,8 @@ object CastRemote {
             title = text(MediaMetadata.KEY_TITLE),
             subtitle = text(MediaMetadata.KEY_ARTIST) ?: text(MediaMetadata.KEY_SUBTITLE),
             image = meta?.images?.firstOrNull()?.url?.toString(),
-            contentUrl = info?.contentUrl ?: info?.contentId,
+            // contentId = lien d'origine ; contentUrl peut être le relais du téléphone.
+            contentUrl = info?.contentId ?: info?.contentUrl,
             isLive = info?.streamType == MediaInfo.STREAM_TYPE_LIVE,
             isPlaying = client?.isPlaying == true,
             isBuffering = client?.isBuffering == true || client?.isLoadingNextItem == true,
