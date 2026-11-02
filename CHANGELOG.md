@@ -18,6 +18,13 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
+## Prochaine version
+- Chromecast : les chaînes en direct se lancent enfin sur la télé. Le
+  téléphone relaie le flux sur le Wi-Fi (la Chromecast refusait le flux HLS
+  du fournisseur, faute d'en-têtes CORS). Une notification « Direct diffusé
+  sur la TV » reste affichée pendant la diffusion pour que le relais
+  continue écran éteint ; elle disparaît toute seule à l'arrêt.
+
 ## 0.1.68 — 29/10/2026
 - Séries : les épisodes que le serveur envoie en double ne s'affichent
   plus qu'une fois dans la liste (un seul épisode par numéro et par saison).

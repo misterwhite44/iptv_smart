@@ -26,7 +26,9 @@ class IptvMediaItemConverter : MediaItemConverter {
         val mimeType = mediaItem.localConfiguration?.mimeType
         val isLive = mediaItem.mediaId.startsWith(LIVE_PREFIX)
         val url = info.contentUrl ?: mediaItem.localConfiguration?.uri?.toString() ?: info.contentId ?: return base
-        val builder = MediaInfo.Builder(info.contentId ?: url)
+        // contentId garde le lien d'origine (le direct passe par le relais du téléphone).
+        val original = mediaItem.mediaMetadata.extras?.getString(ORIGINAL_URL)
+        val builder = MediaInfo.Builder(original ?: url)
             .setContentUrl(url)
             .setContentType(mimeType ?: info.contentType ?: MimeTypes.VIDEO_MP4)
             .setStreamType(if (isLive) MediaInfo.STREAM_TYPE_LIVE else MediaInfo.STREAM_TYPE_BUFFERED)
@@ -55,6 +57,7 @@ class IptvMediaItemConverter : MediaItemConverter {
 
     companion object {
         const val LIVE_PREFIX = "live:"
+        const val ORIGINAL_URL = "zynora_original_url"
         /** Identifiant de la piste de sous-titres français envoyée à la Chromecast. */
         const val SUBTITLE_TRACK_ID = 100L
     }

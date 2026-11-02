@@ -99,7 +99,7 @@ object SubtitleServer {
     }
 
     /** Adresse du téléphone sur le Wi-Fi (IPv4), là où la Chromecast peut le joindre. */
-    private fun localAddress(context: Context): String? {
+    internal fun localAddress(context: Context): String? {
         val cm = context.getSystemService(ConnectivityManager::class.java) ?: return null
         val props = cm.getLinkProperties(cm.activeNetwork) ?: return null
         return props.linkAddresses
