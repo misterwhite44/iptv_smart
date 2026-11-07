@@ -18,7 +18,7 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
-## Prochaine version
+## 0.1.72 — 07/11/2026
 - Démo cachée (codes « demo ») : les films et leurs images s'affichent et se
   lisent de nouveau (l'ancien serveur de vidéos de Google répondait 403).
 - Politique de confidentialité : mention d'OpenSubtitles, qui reçoit le titre
