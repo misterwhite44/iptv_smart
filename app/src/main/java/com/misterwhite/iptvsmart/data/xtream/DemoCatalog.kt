@@ -22,37 +22,42 @@ object DemoCatalog {
         server.trim().equals(USERNAME, ignoreCase = true) &&
             username.trim() == USERNAME && password.trim() == PASSWORD
 
-    private const val GTV = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample"
+    // Vidéos : copies publiques d'Internet Archive et serveur de téléchargement de Blender.
+    // Images : extraites des films, servies par le site GitHub Pages de Zynora (docs/demo/).
+    private const val ARCHIVE = "https://archive.org/download"
+    private const val IMAGES = "https://misterwhite44.github.io/iptv_smart/demo"
     private const val BLENDER = "© Blender Foundation, sous licence Creative Commons Attribution (blender.org)."
 
     private class Film(
         val id: String,
         val name: String,
-        val file: String,
+        val url: String,
+        val image: String,
         val year: String,
         val duration: String,
         val genre: String,
         val plot: String,
-    ) {
-        val url get() = "$GTV/$file.mp4"
-        val image get() = "$GTV/images/$file.jpg"
-    }
+    )
 
     private val films = listOf(
         Film(
-            "1", "Big Buck Bunny", "BigBuckBunny", "2008", "00:09:56", "Animation, Comédie",
+            "1", "Big Buck Bunny", "$ARCHIVE/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4",
+            "$IMAGES/bbb.jpg", "2008", "00:09:56", "Animation, Comédie",
             "Un lapin géant au grand cœur décide de donner une leçon à trois rongeurs qui s'en prennent aux animaux de la forêt.",
         ),
         Film(
-            "2", "Elephants Dream", "ElephantsDream", "2006", "00:10:53", "Animation, Science-fiction",
+            "2", "Elephants Dream", "$ARCHIVE/ElephantsDream/ed_hd_512kb.mp4",
+            "$IMAGES/ed.jpg", "2006", "00:10:53", "Animation, Science-fiction",
             "Deux hommes explorent une machine immense et étrange, mais ils n'y voient pas du tout la même chose.",
         ),
         Film(
-            "3", "Sintel", "Sintel", "2010", "00:14:48", "Animation, Fantastique",
+            "3", "Sintel", "$ARCHIVE/Sintel/sintel-2048-surround_512kb.mp4",
+            "$IMAGES/sintel.jpg", "2010", "00:14:48", "Animation, Fantastique",
             "Une jeune femme parcourt des terres hostiles à la recherche du bébé dragon qu'elle a recueilli.",
         ),
         Film(
-            "4", "Tears of Steel", "TearsOfSteel", "2012", "00:12:14", "Science-fiction",
+            "4", "Tears of Steel", "https://download.blender.org/demo/movies/ToS/tears_of_steel_720p.mov",
+            "$IMAGES/tos.jpg", "2012", "00:12:14", "Science-fiction",
             "À Amsterdam, un groupe de scientifiques tente de sauver le monde d'une armée de robots.",
         ),
     )
