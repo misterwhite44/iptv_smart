@@ -18,6 +18,12 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
+## Prochaine version
+- Démo cachée (codes « demo ») : les films et leurs images s'affichent et se
+  lisent de nouveau (l'ancien serveur de vidéos de Google répondait 403).
+- Politique de confidentialité : mention d'OpenSubtitles, qui reçoit le titre
+  du film pour trouver les sous-titres français.
+
 ## 0.1.70 — 02/11/2026
 - Chromecast : les chaînes en direct se lancent enfin sur la télé. Le
   téléphone relaie le flux sur le Wi-Fi (la Chromecast refusait le flux HLS
