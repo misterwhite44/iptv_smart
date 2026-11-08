@@ -10,6 +10,7 @@ import com.google.android.gms.cast.HlsVideoSegmentFormat
 import com.google.android.gms.cast.MediaInfo
 import com.google.android.gms.cast.MediaQueueItem
 import com.google.android.gms.cast.MediaTrack
+import org.json.JSONObject
 
 /**
  * Précise à la Chromecast comment lire les flux IPTV : les chaînes sont du
@@ -33,7 +34,7 @@ class IptvMediaItemConverter : MediaItemConverter {
             .setContentType(mimeType ?: info.contentType ?: MimeTypes.VIDEO_MP4)
             .setStreamType(if (isLive) MediaInfo.STREAM_TYPE_LIVE else MediaInfo.STREAM_TYPE_BUFFERED)
             .setMetadata(info.metadata)
-            .setCustomData(info.customData)
+            .setCustomData(withWatchData(info.customData, mediaItem, original ?: url))
         // Sous-titres servis par le téléphone : la Chromecast ne les charge
         // que quand on les active depuis la télécommande.
         val tracks = mediaItem.localConfiguration?.subtitleConfigurations.orEmpty().mapIndexed { i, sub ->
@@ -51,6 +52,14 @@ class IptvMediaItemConverter : MediaItemConverter {
             builder.setHlsVideoSegmentFormat(HlsVideoSegmentFormat.MPEG2_TS)
         }
         return MediaQueueItem.Builder(builder.build()).build()
+    }
+
+    /** Ajoute de quoi noter le contenu dans l'historique pendant le cast (voir CastWatchTracker). */
+    private fun withWatchData(custom: JSONObject?, mediaItem: MediaItem, contentId: String): JSONObject? {
+        val raw = mediaItem.mediaMetadata.extras?.getString(CastWatchTracker.EXTRA_WATCH) ?: return custom
+        val watch = runCatching { JSONObject(raw) }.getOrNull() ?: return custom
+        CastWatchTracker.remember(contentId, watch)
+        return (custom ?: JSONObject()).put(CastWatchTracker.CUSTOM_DATA_KEY, watch)
     }
 
     override fun toMediaItem(mediaQueueItem: MediaQueueItem): MediaItem = default.toMediaItem(mediaQueueItem)

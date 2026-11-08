@@ -3,6 +3,7 @@ package com.misterwhite.iptvsmart
 import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
+import com.misterwhite.iptvsmart.cast.CastWatchTracker
 import com.misterwhite.iptvsmart.data.CatalogRepository
 import com.misterwhite.iptvsmart.data.CredentialsStore
 import com.misterwhite.iptvsmart.data.LibraryRepository
@@ -23,6 +24,7 @@ class IptvApp : Application(), ImageLoaderFactory {
         super.onCreate()
         CrashReporter.install(this)
         container = AppContainer(this)
+        container.castWatch.start()
     }
 
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
@@ -54,6 +56,8 @@ class AppContainer(app: Application) {
     val account = AccountRepository(app)
     val accountSync = AccountSync(account, library, credentialsStore)
     val premium = PremiumRepository(app, account, BillingRepository(app))
+    /** Historique et reprise pendant un cast, même lecteur fermé. */
+    val castWatch = CastWatchTracker(app, library, accountSync)
 
     init {
         ExternalSubtitles.init(httpClient)
