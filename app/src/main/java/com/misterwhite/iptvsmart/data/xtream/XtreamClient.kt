@@ -152,7 +152,7 @@ class XtreamClient(private val http: OkHttpClient) {
                     durationSecs = epInfo?.int("duration_secs"),
                 )
             }
-            list.groupBy { it.season }.forEach { (season, eps) ->
+            list.map { it.withNumbersFromTitle() }.groupBy { it.season }.forEach { (season, eps) ->
                 seasons[season] = seasons[season].orEmpty() + eps
             }
         }
@@ -171,15 +171,46 @@ class XtreamClient(private val http: OkHttpClient) {
     }
 
     /**
-     * Certains serveurs listent le même épisode plusieurs fois (même id, ou plusieurs
-     * copies avec le même numéro). On n'en garde qu'un par numéro : celui qui a le plus d'infos.
+     * Certains serveurs listent le même épisode plusieurs fois : même id, même numéro,
+     * ou deux numéros qui se suivent (1 et 2) pour le même « S01E01 » ou le même résumé.
+     * On n'en garde qu'un : celui qui a le plus d'infos.
      */
     private fun dedupeEpisodes(eps: List<Episode>): List<Episode> {
-        val unique = eps.distinctBy { it.id }
-        val numbered = unique.filter { it.number > 0 }
-            .groupBy { it.number }
-            .map { (_, copies) -> copies.maxBy { it.richness() } }
-        return (numbered + unique.filter { it.number <= 0 }).sortedBy { it.number }
+        // Un titre ou un résumé que presque tous les épisodes partagent (le nom de la série,
+        // le résumé de la série) ne dit pas que deux épisodes sont les mêmes.
+        fun <T> usable(values: List<T?>): Set<T> =
+            values.filterNotNull().groupingBy { it }.eachCount()
+                .filter { (_, n) -> n in 2..maxOf(3, eps.size / 2) }.keys
+        val titles = usable(eps.map { it.normalizedTitle() })
+        val plots = usable(eps.map { it.normalizedPlot() })
+        fun Episode.isSameEpisodeAs(other: Episode) =
+            id == other.id ||
+                (number > 0 && number == other.number) ||
+                normalizedTitle()?.let { it in titles && it == other.normalizedTitle() } == true ||
+                normalizedPlot()?.let { it in plots && it == other.normalizedPlot() } == true
+
+        val kept = mutableListOf<Episode>()
+        for (ep in eps.sortedBy { it.number }) {
+            val i = kept.indexOfFirst { it.isSameEpisodeAs(ep) }
+            if (i < 0) kept += ep
+            else if (ep.richness() > kept[i].richness()) kept[i] = ep
+        }
+        return kept.sortedBy { it.number }
+    }
+
+    /** Titre sans ponctuation, ou null s'il est trop générique (« Épisode 3 ») pour comparer. */
+    private fun Episode.normalizedTitle(): String? {
+        val t = title.lowercase().replace(Regex("[^\\p{L}\\p{N}]+"), " ").trim()
+        return t.takeUnless { it.isEmpty() || Regex("(é|e)pisode( \\d+)?").matches(it) }
+    }
+
+    private fun Episode.normalizedPlot(): String? =
+        plot?.lowercase()?.replace(Regex("\\s+"), " ")?.trim()?.takeIf { it.length >= 40 }
+
+    /** Quand le titre contient « S01E02 », c'est lui qui fait foi pour la saison et le numéro. */
+    private fun Episode.withNumbersFromTitle(): Episode {
+        val m = Regex("""S(\d{1,2})\s*[-._ ]?\s*E(\d{1,3})""", RegexOption.IGNORE_CASE).find(title) ?: return this
+        return copy(season = m.groupValues[1].toInt(), number = m.groupValues[2].toInt())
     }
 
     private fun Episode.richness() =
