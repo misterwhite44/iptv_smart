@@ -18,7 +18,7 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
-## Prochaine version
+## 0.1.75 — 08/11/2026
 - Séries : les doublons restants disparaissent aussi quand le serveur donne
   deux numéros différents au même épisode (même « S01E01 » dans le titre,
   même titre ou même résumé), comme sur Malcolm.
