@@ -18,7 +18,7 @@ remplacé tout seul par le numéro de la version et sa date.
 Le lien de téléchargement habituel ne change pas :
 https://github.com/misterwhite44/iptv_smart/releases/download/latest/Zynora.apk
 
-## Prochaine version
+## 0.1.78 — 11/11/2026
 - « En cours » et l'historique du Profil : un appui long ouvre la fiche du
   film ou de la série (pour choisir un autre épisode, par exemple). Le tap
   reprend toujours la lecture.
