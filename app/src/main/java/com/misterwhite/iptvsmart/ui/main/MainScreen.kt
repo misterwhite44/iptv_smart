@@ -66,9 +66,19 @@ class MainActions(
     val playMovie: (MovieDetails) -> Unit,
     /** Reprend une lecture depuis « En cours » ou l'historique. */
     val resume: (WatchEntry) -> Unit,
-    /** Retire une lecture de « En cours » (appui long). */
+    /** Retire une lecture de « En cours ». */
     val forget: (WatchEntry) -> Unit = {},
-)
+) {
+    /** Ouvre la fiche du film ou de la série d'une lecture (appui long), par exemple pour choisir un autre épisode. */
+    fun openDetails(entry: WatchEntry) {
+        when (entry.kind) {
+            MediaKind.MOVIE -> openMovie(entry.contentId)
+            MediaKind.EPISODE -> entry.seriesId?.let(openSeries) ?: resume(entry)
+            MediaKind.SERIES -> openSeries(entry.contentId)
+            MediaKind.LIVE -> playChannel(entry.contentId)
+        }
+    }
+}
 
 /** Historique et favoris, partagés par les onglets. */
 data class LibraryState(

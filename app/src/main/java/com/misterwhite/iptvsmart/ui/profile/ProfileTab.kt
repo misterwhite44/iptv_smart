@@ -1,7 +1,9 @@
 package com.misterwhite.iptvsmart.ui.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -177,7 +179,7 @@ fun ProfileTab(
             }
         } else {
             items(watched.take(15), key = { "h" + it.key }) { entry ->
-                HistoryRow(entry, onClick = { actions.resume(entry) })
+                HistoryRow(entry, onClick = { actions.resume(entry) }, onLongClick = { actions.openDetails(entry) })
             }
         }
 
@@ -449,11 +451,12 @@ private fun StatTile(label: String, value: Int, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun HistoryRow(entry: WatchEntry, onClick: () -> Unit) {
+@OptIn(ExperimentalFoundationApi::class)
+private fun HistoryRow(entry: WatchEntry, onClick: () -> Unit, onLongClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
