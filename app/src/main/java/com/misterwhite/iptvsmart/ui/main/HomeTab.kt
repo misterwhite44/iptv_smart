@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
@@ -209,7 +210,12 @@ fun HomeTab(
             }
             item(key = "inProgress") {
                 ContentRow("En cours", sectionInProgress, key = { it.key }) { entry ->
-                    InProgressCard(entry, onClick = { actions.resume(entry) }, onLongClick = { onForget(entry) })
+                    InProgressCard(
+                        entry,
+                        onClick = { actions.resume(entry) },
+                        onLongClick = { actions.openDetails(entry) },
+                        onRemove = { onForget(entry) },
+                    )
                 }
             }
             when (section) {
@@ -254,9 +260,12 @@ fun HomeTab(
 
 private const val MAX_IN_PROGRESS = 20
 
-/** Carte 16:9 de « En cours » : progression et temps restant. */
+/**
+ * Carte 16:9 de « En cours » : progression et temps restant.
+ * Tap : reprend la lecture. Appui long : ouvre la fiche. Croix : retire de « En cours ».
+ */
 @Composable
-private fun InProgressCard(entry: WatchEntry, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun InProgressCard(entry: WatchEntry, onClick: () -> Unit, onLongClick: () -> Unit, onRemove: () -> Unit) {
     Column(Modifier.width(220.dp)) {
         PressableCard(
             onClick = onClick,
@@ -274,6 +283,14 @@ private fun InProgressCard(entry: WatchEntry, onClick: () -> Unit, onLongClick: 
                 Icon(Icons.Filled.PlayArrow, contentDescription = "Reprendre", tint = Color.White)
             }
             entry.progress?.let { ProgressBar(it, Modifier.align(Alignment.BottomCenter)) }
+            IconButton(onClick = onRemove, modifier = Modifier.align(Alignment.TopEnd).size(36.dp)) {
+                Box(
+                    Modifier.size(24.dp).background(Color.Black.copy(alpha = 0.55f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.Close, contentDescription = "Retirer de « En cours »", tint = Color.White, modifier = Modifier.size(16.dp))
+                }
+            }
         }
         Spacer(Modifier.height(6.dp))
         Text(entry.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
