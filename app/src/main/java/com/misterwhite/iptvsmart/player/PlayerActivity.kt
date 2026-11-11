@@ -69,6 +69,7 @@ import com.misterwhite.iptvsmart.ui.premium.PremiumCastButton
 import com.misterwhite.iptvsmart.cast.CastRemote
 import com.misterwhite.iptvsmart.cast.CastRemoteScreen
 import com.misterwhite.iptvsmart.cast.CastSupport
+import com.misterwhite.iptvsmart.cast.CastWatchTracker
 import com.misterwhite.iptvsmart.cast.IptvMediaItemConverter
 import com.misterwhite.iptvsmart.cast.LiveCastProxy
 import com.misterwhite.iptvsmart.cast.SubtitleServer
@@ -285,7 +286,13 @@ class PlayerActivity : FragmentActivity() {
             .setMediaMetadata(
                 MediaMetadata.Builder()
                     // Lien d'origine : la télécommande retrouve la chaîne même via le relais.
-                    .setExtras(Bundle().apply { putString(IptvMediaItemConverter.ORIGINAL_URL, item.url) })
+                    .setExtras(Bundle().apply {
+                        putString(IptvMediaItemConverter.ORIGINAL_URL, item.url)
+                        // Pour l'historique pendant le cast, même lecteur fermé.
+                        if (forCast && item.kind != MediaKind.LIVE) {
+                            putString(CastWatchTracker.EXTRA_WATCH, CastWatchTracker.describe(item))
+                        }
+                    })
                     .setTitle(item.title)
                     .setArtist(item.subtitle)
                     .setArtworkUri(item.image?.let(Uri::parse))
@@ -567,6 +574,8 @@ class PlayerActivity : FragmentActivity() {
         val exo = activePlayer ?: return
         val item = items.getOrNull(currentItemIndex()) ?: return
         if (item.kind == MediaKind.LIVE) return
+        // Chromecast en train de charger : position 0, qui effacerait la reprise.
+        if (isCasting.value && (exo.playbackState != Player.STATE_READY || exo.currentPosition <= 0)) return
         val duration = exo.duration.takeIf { it != C.TIME_UNSET && it > 0 }
         // Certains films n'annoncent pas leur durée : on garde quand même la
         // position, mais seulement une fois la lecture vraiment lancée.
